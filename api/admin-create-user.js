@@ -13,6 +13,7 @@ export default async function handler(req, res) {
 
   try {
     const { admin_key, email, web_password, mail_password } = req.body || {};
+
     if (admin_key !== process.env.SUPABASE_SERVICE_ROLE_KEY) {
       throw httpError(403, "admin_key salah.");
     }
@@ -39,6 +40,7 @@ export default async function handler(req, res) {
       .limit(1);
 
     if (error) throw httpError(500, error.message);
+
     const user = data?.[0];
 
     await supabase.from("mail_accounts").insert({
