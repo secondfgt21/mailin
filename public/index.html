@@ -36,16 +36,12 @@
       <form id="createUserForm" class="form hidden">
         <label>Admin Key</label>
         <input type="password" id="adminKey" placeholder="service_role key supabase" />
-
         <label>Email User</label>
         <input type="email" id="createEmail" placeholder="buyer@impura.id" />
-
         <label>Password Login Web</label>
         <input type="text" id="createWebPassword" placeholder="password untuk login website" />
-
         <label>Password Email Mailin</label>
         <input type="text" id="createMailPassword" placeholder="password inbox mailin" />
-
         <button type="submit" class="btn">Create User</button>
       </form>
 
@@ -56,7 +52,7 @@
       <div class="topbar card">
         <div>
           <h2 id="userEmail">-</h2>
-          <p class="muted">Inbox otomatis sync • gaya mirip Gmail</p>
+          <p class="muted">Inbox otomatis sync • multi akun email</p>
         </div>
         <div class="topbar-actions">
           <span class="sync-badge" id="syncStatus">Menyiapkan...</span>
@@ -64,6 +60,24 @@
           <button class="btn btn-ghost" id="logoutBtn">Logout</button>
         </div>
       </div>
+
+      <section class="card account-bar">
+        <div class="account-bar-head">
+          <div class="gmail-title small">Akun Email</div>
+          <button class="btn btn-secondary" id="toggleAddAccountBtn" type="button">+ Tambah Akun</button>
+        </div>
+
+        <form id="addAccountForm" class="form hidden slim-form">
+          <label>Email Mailin</label>
+          <input type="email" id="addAccountEmail" placeholder="akunlain@impura.id" />
+          <label>Password Email</label>
+          <input type="text" id="addAccountPassword" placeholder="password inbox mailin" />
+          <button type="submit" class="btn">Simpan Akun</button>
+        </form>
+
+        <div id="accountMsg" class="msg"></div>
+        <div id="accountList" class="account-list"></div>
+      </section>
 
       <section class="card gmail-shell" id="inboxPage">
         <div class="gmail-toolbar">
@@ -78,24 +92,6 @@
           <button class="back-btn" id="backBtn" type="button">← Kembali</button>
           <div class="sync-badge" id="detailSyncStatus">Auto sync aktif</div>
         </div>
-        
-        <section class="card account-bar">
-  <div class="account-bar-head">
-    <div class="gmail-title small">Akun Email</div>
-    <button class="btn btn-secondary" id="toggleAddAccountBtn" type="button">+ Tambah Akun</button>
-  </div>
-
-  <form id="addAccountForm" class="form hidden slim-form">
-    <label>Email Mailin</label>
-    <input type="email" id="addAccountEmail" placeholder="akunlain@impura.id" />
-    <label>Password Email</label>
-    <input type="text" id="addAccountPassword" placeholder="password inbox mailin" />
-    <button type="submit" class="btn">Simpan Akun</button>
-  </form>
-
-  <div id="accountMsg" class="msg"></div>
-  <div id="accountList" class="account-list"></div>
-</section>
 
         <article id="emailDetail" class="mail-open">
           <h3 id="detailSubject"></h3>
@@ -112,4 +108,4 @@
 
   <script src="/app.js"></script>
 </body>
-</html> 
+</html>
