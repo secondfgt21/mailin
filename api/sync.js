@@ -25,6 +25,7 @@ export default async function handler(req, res) {
     if (accountId) {
       const account = await getAccountById(user.id, accountId);
       if (!account) throw httpError(404, "Akun email tidak ditemukan.");
+
       const result = await syncMailForAccount(user, account);
       return sendJson(res, 200, { ok: true, mode: "single", result });
     }
