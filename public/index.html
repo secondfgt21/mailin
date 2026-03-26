@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Impura Mail Panel</title>
+  <title>Impura Mail</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -36,16 +36,12 @@
       <form id="createUserForm" class="form hidden">
         <label>Admin Key</label>
         <input type="password" id="adminKey" placeholder="service_role key supabase" />
-
         <label>Email User</label>
         <input type="email" id="createEmail" placeholder="buyer@impura.id" />
-
         <label>Password Login Web</label>
         <input type="text" id="createWebPassword" placeholder="password untuk login website" />
-
         <label>Password Email Mailin</label>
         <input type="text" id="createMailPassword" placeholder="password inbox mailin" />
-
         <button type="submit" class="btn">Create User</button>
       </form>
 
@@ -56,35 +52,38 @@
       <div class="topbar card">
         <div>
           <h2 id="userEmail">-</h2>
-          <p class="muted">Nuansa glow merah hitam • inbox sederhana</p>
+          <p class="muted">Inbox otomatis sync • gaya mirip Gmail</p>
         </div>
         <div class="topbar-actions">
-          <button class="btn btn-secondary" id="syncBtn">Sync Inbox</button>
+          <span class="sync-badge" id="syncStatus">Menyiapkan...</span>
+          <button class="btn btn-secondary" id="syncBtn">Sync Sekarang</button>
           <button class="btn btn-ghost" id="logoutBtn">Logout</button>
         </div>
       </div>
 
-      <div class="layout">
-        <aside class="card sidebar">
-          <div class="sidebar-title">Inbox</div>
-          <div id="emailList" class="email-list"></div>
-        </aside>
+      <section class="card gmail-shell" id="inboxPage">
+        <div class="gmail-toolbar">
+          <div class="gmail-title">Inbox</div>
+          <div class="gmail-subtitle" id="inboxCount">0 email</div>
+        </div>
+        <div id="emailList" class="gmail-list"></div>
+      </section>
 
-        <section class="card viewer">
-          <div id="emptyState" class="empty-state">
-            Pilih email di kiri untuk melihat isi pesan.
+      <section class="card detail-page hidden" id="detailPage">
+        <div class="detail-topbar">
+          <button class="back-btn" id="backBtn" type="button">← Kembali</button>
+          <div class="sync-badge" id="detailSyncStatus">Auto sync aktif</div>
+        </div>
+
+        <article id="emailDetail" class="mail-open">
+          <h3 id="detailSubject"></h3>
+          <div class="meta">
+            <div><span>Dari:</span> <strong id="detailFrom"></strong></div>
+            <div><span>Masuk:</span> <strong id="detailDate"></strong></div>
           </div>
-
-          <article id="emailDetail" class="email-detail hidden">
-            <h3 id="detailSubject"></h3>
-            <div class="meta">
-              <div><span>Dari:</span> <strong id="detailFrom"></strong></div>
-              <div><span>Masuk:</span> <strong id="detailDate"></strong></div>
-            </div>
-            <pre id="detailBody" class="body"></pre>
-          </article>
-        </section>
-      </div>
+          <pre id="detailBody" class="body"></pre>
+        </article>
+      </section>
     </section>
   </main>
 
