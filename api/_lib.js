@@ -217,30 +217,40 @@ export async function syncMailForUser(user) {
 function extractTextFromRaw(raw) {
   if (!raw) return "";
 
+  // ambil body setelah header
   const parts = raw.split(/\r?\n\r?\n/);
-  if (parts.length < 2) return raw.slice(0, 20000);
-
   let body = parts.slice(1).join("\n\n");
 
-  // hapus style, script, head, xml, comments
+  // 🔥 buang boundary MIME
+  body = body.replace(/--[_A-Za-z0-9\-]+/g, " ");
+
+  // 🔥 buang header dalam body
+  body = body.replace(/Content-[^\n]+\n/gi, " ");
+
+  // 🔥 decode quoted-printable (=0A dll)
+  body = body
+    .replace(/=\r?\n/g, "") // soft line break
+    .replace(/=([A-F0-9]{2})/gi, (_, hex) =>
+      String.fromCharCode(parseInt(hex, 16))
+    );
+
+  // 🔥 hapus style/script dll
   body = body
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<head[\s\S]*?<\/head>/gi, " ")
-    .replace(/<xml[\s\S]*?<\/xml>/gi, " ")
     .replace(/<!--[\s\S]*?-->/g, " ");
 
-  // ubah line break HTML jadi newline
+  // 🔥 convert HTML ke text
   body = body
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n")
     .replace(/<\/div>/gi, "\n")
     .replace(/<\/tr>/gi, "\n");
 
-  // hapus semua tag HTML lain
   body = body.replace(/<[^>]+>/g, " ");
 
-  // decode entity HTML dasar
+  // 🔥 decode entity
   body = body
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
@@ -249,7 +259,10 @@ function extractTextFromRaw(raw) {
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'");
 
-  // rapikan spasi & newline
+  // 🔥 hapus baris sampah
+  body = body.replace(/^=.*$/gm, ""); // buang line =_xxx
+
+  // rapikan
   body = body
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
