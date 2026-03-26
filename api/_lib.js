@@ -268,12 +268,12 @@ function extractTextFromRaw(raw) {
 }
 
 export async function syncMailForAccount(user, account) {
-  if (!user?.is_active) {
-    throw httpError(403, "Akun web nonaktif.");
+  if (!account) {
+    throw httpError(500, "Account undefined (BUG)");
   }
 
-  if (!account?.is_active) {
-    throw httpError(403, "Akun email nonaktif.");
+  if (!account.mail_password_encrypted) {
+    throw httpError(500, `Password kosong untuk ${account.email}`);
   }
 
   const client = new ImapFlow({
