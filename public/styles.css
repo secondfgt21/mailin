@@ -288,3 +288,27 @@ input:focus {
     align-items: flex-start;
   }
 }
+
+
+.tab-row {
+  display: flex;
+  gap: 10px;
+  margin: 18px 0 6px;
+}
+
+.tab-btn {
+  flex: 1;
+  border: 1px solid rgba(255, 72, 72, 0.16);
+  background: rgba(255,255,255,0.03);
+  color: #ffdede;
+  padding: 11px 14px;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  background: linear-gradient(180deg, #ff3751, #86111e);
+  box-shadow: 0 10px 26px rgba(255, 34, 60, 0.22);
+  border-color: transparent;
+}
