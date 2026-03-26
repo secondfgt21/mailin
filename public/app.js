@@ -27,16 +27,20 @@ let selectedEmailId = null;
 function setToken(token) {
   localStorage.setItem("impura_token", token);
 }
+
 function getToken() {
   return localStorage.getItem("impura_token");
 }
+
 function clearToken() {
   localStorage.removeItem("impura_token");
   localStorage.removeItem("impura_user_email");
 }
+
 function setUserEmailCache(email) {
   localStorage.setItem("impura_user_email", email);
 }
+
 function getUserEmailCache() {
   return localStorage.getItem("impura_user_email");
 }
@@ -45,13 +49,20 @@ async function api(path, options = {}) {
   const token = getToken();
   const headers = {
     "Content-Type": "application/json",
-    ...(options.headers || {}),
+    ...(options.headers || {})
   };
-  if (token) headers.Authorization = `Bearer ${token}`;
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   const res = await fetch(path, { ...options, headers });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || "Request gagal");
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Request gagal");
+  }
+
   return data;
 }
 
@@ -93,8 +104,11 @@ function shortDate(v) {
   if (!v) return "-";
   try {
     const d = new Date(v);
-    return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) + " " +
-      d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    return (
+      d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) +
+      " " +
+      d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+    );
   } catch {
     return v;
   }
@@ -102,6 +116,14 @@ function shortDate(v) {
 
 function buildSnippet(text) {
   return (text || "").replace(/\s+/g, " ").trim().slice(0, 120);
+}
+
+function cleanBody(text) {
+  return (text || "(Isi email kosong)")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n +/g, "\n")
+    .trim();
 }
 
 function showInboxPage() {
@@ -113,17 +135,13 @@ function showDetailPage(item) {
   selectedEmailId = item.id;
   inboxPage.classList.add("hidden");
   detailPage.classList.remove("hidden");
+
   detailSubject.textContent = item.subject || "(Tanpa subject)";
   detailFrom.textContent = item.from_name
     ? `${item.from_name} <${item.from_email || "-"}>`
     : (item.from_email || "-");
   detailDate.textContent = formatDate(item.received_at || item.created_at);
-  const cleanedBody = (item.body_text || "(Isi email kosong)")
-  .replace(/\n{3,}/g, "\n\n")
-  .replace(/[ \t]+\n/g, "\n")
-  .trim();
-
-detailBody.textContent = cleanedBody;
+  detailBody.textContent = cleanBody(item.body_text);
 }
 
 function renderEmailList() {
@@ -131,14 +149,17 @@ function renderEmailList() {
   inboxCount.textContent = `${emails.length} email`;
 
   if (!emails.length) {
-    emailList.innerHTML = '<div class="empty-list">Belum ada email di server kamu.</div>';
+    emailList.innerHTML =
+      '<div class="empty-list">Belum ada email di server kamu.</div>';
     showInboxPage();
     return;
   }
 
   emails.forEach((item) => {
     const row = document.createElement("div");
-    row.className = "gmail-row" + (item.id === selectedEmailId ? " active" : "");
+    row.className =
+      "gmail-row" + (item.id === selectedEmailId ? " active" : "");
+
     row.innerHTML = `
       <div class="sender">${item.from_name || item.from_email || "(Unknown sender)"}</div>
       <div class="subject-line">
@@ -147,12 +168,16 @@ function renderEmailList() {
       </div>
       <div class="mail-date">${shortDate(item.received_at || item.created_at)}</div>
     `;
+
     row.onclick = () => {
-      document.querySelectorAll(".gmail-row").forEach(x => x.classList.remove("active"));
+      document
+        .querySelectorAll(".gmail-row")
+        .forEach((x) => x.classList.remove("active"));
       row.classList.add("active");
       showDetailPage(item);
       history.replaceState({}, "", "#mail-" + item.id);
     };
+
     emailList.appendChild(row);
   });
 
@@ -174,7 +199,7 @@ async function fetchEmailsOnly() {
 
   if (window.location.hash.startsWith("#mail-")) {
     const id = Number(window.location.hash.replace("#mail-", ""));
-    const selected = emails.find(x => x.id === id);
+    const selected = emails.find((x) => x.id === id);
     if (selected) {
       showDetailPage(selected);
       return;
@@ -188,6 +213,7 @@ async function syncAndLoadEmails(showLoading = true) {
   if (showLoading) setSyncText("Sedang sync...");
   syncBtn.disabled = true;
   syncBtn.textContent = "Sync...";
+
   try {
     await api("/api/sync", { method: "POST" });
     await fetchEmailsOnly();
@@ -219,21 +245,26 @@ function startAutoSync() {
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   loginMsg.textContent = "Sedang login...";
+
   try {
     const payload = {
       email: document.getElementById("email").value.trim(),
-      password: document.getElementById("password").value,
+      password: document.getElementById("password").value
     };
+
     const data = await api("/api/login", {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
+
     setToken(data.token);
     setUserEmailCache(data.user?.email || payload.email);
     userEmail.textContent = data.user?.email || payload.email;
+
     showDashboard();
     loginMsg.textContent = "";
     showInboxPage();
+
     await syncAndLoadEmails(true);
     startAutoSync();
   } catch (err) {
@@ -244,17 +275,20 @@ loginForm.addEventListener("submit", async (e) => {
 createUserForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   loginMsg.textContent = "Sedang membuat user...";
+
   try {
     const payload = {
       admin_key: document.getElementById("adminKey").value.trim(),
       email: document.getElementById("createEmail").value.trim(),
       web_password: document.getElementById("createWebPassword").value,
-      mail_password: document.getElementById("createMailPassword").value,
+      mail_password: document.getElementById("createMailPassword").value
     };
+
     const data = await api("/api/admin/create-user", {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
+
     loginMsg.textContent = `User berhasil dibuat: ${data.user?.email || payload.email}`;
     createUserForm.reset();
     setTab("login");
@@ -265,6 +299,7 @@ createUserForm.addEventListener("submit", async (e) => {
 
 showLoginTab.addEventListener("click", () => setTab("login"));
 showCreateTab.addEventListener("click", () => setTab("create"));
+
 backBtn.addEventListener("click", () => {
   showInboxPage();
   history.replaceState({}, "", "#inbox");
@@ -289,6 +324,7 @@ logoutBtn.addEventListener("click", () => {
 
 (async function init() {
   setTab("login");
+
   const token = getToken();
   const cachedEmail = getUserEmailCache();
 
