@@ -126,7 +126,7 @@ export async function getUserById(id) {
 export async function listAccountsForUser(userId) {
   const { data, error } = await supabase
     .from("mail_accounts")
-    .select("id, owner_user_id, email, is_active, created_at")
+    .select("id, owner_user_id, email, mail_password_encrypted, is_active, created_at")
     .eq("owner_user_id", userId)
     .order("created_at", { ascending: true });
 
@@ -268,12 +268,20 @@ function extractTextFromRaw(raw) {
 }
 
 export async function syncMailForAccount(user, account) {
+  if (!user?.is_active) {
+    throw httpError(403, "Akun web nonaktif.");
+  }
+
   if (!account) {
-    throw httpError(500, "Account undefined (BUG)");
+    throw httpError(500, "Account tidak ditemukan.");
+  }
+
+  if (!account?.is_active) {
+    throw httpError(403, "Akun email nonaktif.");
   }
 
   if (!account.mail_password_encrypted) {
-    throw httpError(500, `Password kosong untuk ${account.email}`);
+    throw httpError(500, `mail_password_encrypted kosong untuk ${account.email}`);
   }
 
   const client = new ImapFlow({
