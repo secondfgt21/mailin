@@ -1,6 +1,7 @@
 const loginView = document.getElementById("loginView");
 const dashboardView = document.getElementById("dashboardView");
 const loginForm = document.getElementById("loginForm");
+const createUserForm = document.getElementById("createUserForm");
 const loginMsg = document.getElementById("loginMsg");
 const userEmail = document.getElementById("userEmail");
 const emailList = document.getElementById("emailList");
@@ -12,6 +13,8 @@ const detailDate = document.getElementById("detailDate");
 const detailBody = document.getElementById("detailBody");
 const syncBtn = document.getElementById("syncBtn");
 const logoutBtn = document.getElementById("logoutBtn");
+const showLoginTab = document.getElementById("showLoginTab");
+const showCreateTab = document.getElementById("showCreateTab");
 
 let emails = [];
 
@@ -47,6 +50,15 @@ function showLogin() {
 function showDashboard() {
   loginView.classList.add("hidden");
   dashboardView.classList.remove("hidden");
+}
+
+function setTab(mode) {
+  const isLogin = mode === "login";
+  loginForm.classList.toggle("hidden", !isLogin);
+  createUserForm.classList.toggle("hidden", isLogin);
+  showLoginTab.classList.toggle("active", isLogin);
+  showCreateTab.classList.toggle("active", !isLogin);
+  loginMsg.textContent = "";
 }
 
 function formatDate(v) {
@@ -138,6 +150,31 @@ loginForm.addEventListener("submit", async (e) => {
   }
 });
 
+createUserForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  loginMsg.textContent = "Sedang membuat user...";
+  try {
+    const payload = {
+      admin_key: document.getElementById("adminKey").value.trim(),
+      email: document.getElementById("createEmail").value.trim(),
+      web_password: document.getElementById("createWebPassword").value,
+      mail_password: document.getElementById("createMailPassword").value,
+    };
+    const data = await api("/api/admin/create-user", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    loginMsg.textContent = `User berhasil dibuat: ${data.user?.email || payload.email}`;
+    createUserForm.reset();
+    setTab("login");
+  } catch (err) {
+    loginMsg.textContent = err.message;
+  }
+});
+
+showLoginTab.addEventListener("click", () => setTab("login"));
+showCreateTab.addEventListener("click", () => setTab("create"));
+
 syncBtn.addEventListener("click", async () => {
   try {
     await syncAndLoadEmails();
@@ -150,9 +187,11 @@ logoutBtn.addEventListener("click", () => {
   clearToken();
   emails = [];
   showLogin();
+  setTab("login");
 });
 
 (async function init() {
+  setTab("login");
   if (!getToken()) {
     showLogin();
     return;
