@@ -1,4 +1,85 @@
-<section class="card account-bar">
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Impura Mail</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <main class="container">
+    <section class="card login-card" id="loginView">
+      <div class="brand-wrap">
+        <div class="brand-dot"></div>
+        <div>
+          <h1>Impura Mail</h1>
+          <p class="muted">Login untuk melihat inbox email kamu.</p>
+        </div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" id="showLoginTab" type="button">Login</button>
+        <button class="tab-btn" id="showCreateTab" type="button">Create User</button>
+      </div>
+
+      <form id="loginForm" class="form">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="buyer@impura.id" required />
+        <label>Password</label>
+        <input type="password" id="password" placeholder="••••••••" required />
+        <button type="submit" class="btn">Login</button>
+      </form>
+
+      <form id="createUserForm" class="form hidden">
+        <label>Admin Key</label>
+        <input type="password" id="adminKey" placeholder="service_role key supabase" />
+
+        <label>Email User</label>
+        <input type="email" id="createEmail" placeholder="buyer@impura.id" />
+
+        <label>Password Login Web</label>
+        <input type="text" id="createWebPassword" placeholder="password untuk login website" />
+
+        <label>Password Email Mailin</label>
+        <input type="text" id="createMailPassword" placeholder="password inbox mailin" />
+
+        <button type="submit" class="btn">Create User</button>
+      </form>
+
+      <p id="loginMsg" class="msg"></p>
+    </section>
+
+    <section class="dashboard hidden" id="dashboardView">
+      <div class="topbar card">
+        <div>
+          <h2 id="userEmail">-</h2>
+          <p class="muted">Inbox otomatis sync • gaya mirip Gmail</p>
+        </div>
+        <div class="topbar-actions">
+          <span class="sync-badge" id="syncStatus">Menyiapkan...</span>
+          <button class="btn btn-secondary" id="syncBtn">Sync Sekarang</button>
+          <button class="btn btn-ghost" id="logoutBtn">Logout</button>
+        </div>
+      </div>
+
+      <section class="card gmail-shell" id="inboxPage">
+        <div class="gmail-toolbar">
+          <div class="gmail-title">Inbox</div>
+          <div class="gmail-subtitle" id="inboxCount">0 email</div>
+        </div>
+        <div id="emailList" class="gmail-list"></div>
+      </section>
+
+      <section class="card detail-page hidden" id="detailPage">
+        <div class="detail-topbar">
+          <button class="back-btn" id="backBtn" type="button">← Kembali</button>
+          <div class="sync-badge" id="detailSyncStatus">Auto sync aktif</div>
+        </div>
+        
+        <section class="card account-bar">
   <div class="account-bar-head">
     <div class="gmail-title small">Akun Email</div>
     <button class="btn btn-secondary" id="toggleAddAccountBtn" type="button">+ Tambah Akun</button>
@@ -15,3 +96,19 @@
   <div id="accountMsg" class="msg"></div>
   <div id="accountList" class="account-list"></div>
 </section>
+
+        <article id="emailDetail" class="mail-open">
+          <h3 id="detailSubject"></h3>
+          <div class="meta">
+            <div><span>Dari:</span> <strong id="detailFrom"></strong></div>
+            <div><span>Masuk:</span> <strong id="detailDate"></strong></div>
+          </div>
+          <div id="detailBody" class="body"></div>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html> 
