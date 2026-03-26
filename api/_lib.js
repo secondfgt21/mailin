@@ -194,66 +194,69 @@ export async function ensurePrimaryAccountForUser(user) {
  * Email yang sudah pernah masuk tidak akan dobel karena pakai
  * upsert + unique(user_id, mail_uid).
  */
-export async function syncMailForUser(user) {
-  if (!user?.is_active) {
-    throw httpError(403, "Akun nonaktif.");
-  }
+export async function syncMailForAccount(user, account) {
+  if (!user?.is_active) throw httpError(403, "Akun web nonaktif.");
+  if (!account?.is_active) throw httpError(403, "Akun email nonaktif.");
 
   const client = new ImapFlow({
     host: MAILIN_IMAP_HOST,
     port: MAILIN_IMAP_PORT,
     secure: MAILIN_IMAP_TLS,
     auth: {
-      user: user.email,
-      pass: decryptValue(user.mail_password_encrypted),
+      user: account.email,
+      pass: decryptValue(account.mail_password_encrypted)
     },
-    logger: false,
+    logger: false
   });
 
   await client.connect();
 
   try {
-    await client.mailboxOpen("INBOX");
-    const lock = await client.getMailboxLock("INBOX");
-
-    try {
-      for await (const msg of client.fetch("1:*", {
-        uid: true,
-        envelope: true,
-        source: true,
-        internalDate: true,
-      })) {
-        const fromEntry = msg.envelope?.from?.[0];
-        const fromEmail = fromEntry?.address || "";
-        const fromName = fromEntry?.name || "";
-        const subject = msg.envelope?.subject || "(Tanpa subject)";
-        const receivedAt = msg.internalDate
-          ? new Date(msg.internalDate).toISOString()
-          : null;
-        const messageId = msg.envelope?.messageId || null;
-        const bodyText = extractTextFromRaw(msg.source?.toString("utf8") || "");
-
-        const { error } = await supabase.from("emails").upsert(
-          {
-            user_id: user.id,
-            mail_uid: msg.uid,
-            message_id: messageId,
-            from_name: fromName,
-            from_email: fromEmail,
-            subject,
-            body_text: bodyText.slice(0, 20000),
-            received_at: receivedAt,
-          },
-          { onConflict: "user_id,mail_uid" }
-        );
-
-        if (error) {
-          throw httpError(500, error.message);
-        }
-      }
-    } finally {
-      lock.release();
+    const mailbox = await client.mailboxOpen("INBOX");
+    if (!mailbox.exists || mailbox.exists < 1) {
+      return { imported: 0, message: "Inbox kosong" };
     }
+
+    const startSeq = Math.max(1, mailbox.exists - 49);
+    const range = `${startSeq}:*`;
+    let imported = 0;
+
+    for await (const msg of client.fetch(range, {
+      uid: true,
+      envelope: true,
+      source: true,
+      internalDate: true
+    })) {
+      const fromEntry = msg.envelope?.from?.[0];
+      const fromEmail = fromEntry?.address || "";
+      const fromName = fromEntry?.name || "";
+      const subject = msg.envelope?.subject || "(Tanpa subject)";
+      const receivedAt = msg.internalDate
+        ? new Date(msg.internalDate).toISOString()
+        : null;
+      const messageId = msg.envelope?.messageId || null;
+      const bodyText = cleanBodyText(extractTextFromRaw(msg.source?.toString("utf8") || ""));
+
+      const { error } = await supabase.from("emails").upsert(
+        {
+          user_id: user.id,
+          mail_account_id: account.id,
+          mail_uid: msg.uid,
+          message_id: messageId,
+          from_name: fromName,
+          from_email: fromEmail,
+          subject,
+          body_text: bodyText.slice(0, 20000),
+          received_at: receivedAt
+        },
+        { onConflict: "user_id,mail_account_id,mail_uid" }
+      );
+
+      if (error) throw httpError(500, error.message);
+      imported++;
+    }
+
+    return { imported, message: "Sync selesai" };
   } finally {
     await client.logout().catch(() => {});
   }
