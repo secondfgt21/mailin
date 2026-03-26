@@ -143,6 +143,51 @@ export function allowMethods(req, res, methods) {
   return true;
 }
 
+
+export async function listAccountsForUser(userId) {
+  const { data, error } = await supabase
+    .from("mail_accounts")
+    .select("id, owner_user_id, email, is_active, created_at")
+    .eq("owner_user_id", userId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw httpError(500, error.message);
+  return data || [];
+}
+
+export async function getAccountById(userId, accountId) {
+  const { data, error } = await supabase
+    .from("mail_accounts")
+    .select("*")
+    .eq("owner_user_id", userId)
+    .eq("id", accountId)
+    .limit(1);
+
+  if (error) throw httpError(500, error.message);
+  return data?.[0] || null;
+}
+
+export async function ensurePrimaryAccountForUser(user) {
+  const accounts = await listAccountsForUser(user.id);
+  const exists = accounts.find(
+    a => a.email.toLowerCase() === String(user.email).toLowerCase()
+  );
+  if (exists) return exists;
+
+  const { data, error } = await supabase
+    .from("mail_accounts")
+    .insert({
+      owner_user_id: user.id,
+      email: user.email,
+      mail_password_encrypted: user.mail_password_encrypted,
+      is_active: true
+    })
+    .select("*")
+    .limit(1);
+
+  if (error) throw httpError(500, error.message);
+  return data?.[0] || null;
+}
 /**
  * OPSI 1:
  * Ambil SEMUA email dari INBOX Mailin, lalu simpan ke Supabase.
