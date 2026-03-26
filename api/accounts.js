@@ -33,7 +33,11 @@ export default async function handler(req, res) {
       }
 
       const accounts = await listAccountsForUser(user.id);
-      if (accounts.find(a => a.email.toLowerCase() === String(email).toLowerCase())) {
+      if (
+        accounts.find(
+          (a) => a.email.toLowerCase() === String(email).toLowerCase()
+        )
+      ) {
         throw httpError(400, "Email sudah ditambahkan.");
       }
 
@@ -54,10 +58,14 @@ export default async function handler(req, res) {
 
     if (req.method === "DELETE") {
       const accountId = Number(req.query.id);
-      if (!accountId) throw httpError(400, "id akun wajib diisi.");
+      if (!accountId) {
+        throw httpError(400, "id akun wajib diisi.");
+      }
 
       const account = await getAccountById(user.id, accountId);
-      if (!account) throw httpError(404, "Akun tidak ditemukan.");
+      if (!account) {
+        throw httpError(404, "Akun tidak ditemukan.");
+      }
 
       const { error } = await supabase
         .from("mail_accounts")
