@@ -5,6 +5,7 @@
     { "source": "/api/me", "destination": "/api/me.js" },
     { "source": "/api/sync", "destination": "/api/sync.js" },
     { "source": "/api/emails", "destination": "/api/emails.js" },
+    { "source": "/api/accounts", "destination": "/api/accounts.js" },
     { "source": "/api/admin/create-user", "destination": "/api/admin-create-user.js" },
     { "source": "/api/health", "destination": "/api/health.js" },
     { "source": "/(.*)", "destination": "/public/$1" },
