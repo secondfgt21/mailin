@@ -8,8 +8,14 @@
   --shadow: 0 0 28px rgba(255, 46, 67, 0.16), 0 0 60px rgba(98, 0, 15, 0.22);
 }
 
-* { box-sizing: border-box; }
-html, body { min-height: 100%; }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
 
 body {
   margin: 0;
@@ -81,7 +87,12 @@ body {
   box-shadow: 0 0 20px rgba(255, 51, 71, 0.75);
 }
 
-h1, h2, h3, p { margin: 0; }
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
 
 .muted {
   color: var(--muted);
@@ -128,7 +139,9 @@ input:focus {
   box-shadow: 0 10px 26px rgba(255, 34, 60, 0.22);
 }
 
-.btn:hover { filter: brightness(1.05); }
+.btn:hover {
+  filter: brightness(1.05);
+}
 
 .btn-secondary {
   background: linear-gradient(180deg, #381016, #1b0b0d);
@@ -147,7 +160,9 @@ input:focus {
   font-size: 14px;
 }
 
-.hidden { display: none !important; }
+.hidden {
+  display: none !important;
+}
 
 .dashboard {
   display: grid;
@@ -174,7 +189,7 @@ input:focus {
   padding: 9px 12px;
   border-radius: 999px;
   color: #ffd1d1;
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
   font-size: 13px;
 }
 
@@ -219,7 +234,7 @@ input:focus {
 }
 
 .gmail-row:hover {
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .gmail-row.active {
@@ -277,7 +292,7 @@ input:focus {
 
 .back-btn {
   border: 1px solid rgba(255, 92, 92, 0.16);
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
   color: #ffe6e6;
   padding: 10px 14px;
   border-radius: 14px;
@@ -286,19 +301,19 @@ input:focus {
 }
 
 .mail-open {
-  padding: 14px 6px 6px;
+  padding: 10px 4px 4px;
 }
 
 .mail-open h3 {
-  font-size: 28px;
-  line-height: 1.25;
+  font-size: 24px;
+  line-height: 1.2;
   color: #fff2f2;
 }
 
 .meta {
   display: grid;
-  gap: 8px;
-  margin: 16px 0 18px;
+  gap: 4px;
+  margin: 8px 0 12px;
   color: #e8b8b8;
   font-size: 14px;
 }
@@ -318,7 +333,7 @@ input:focus {
   color: #ffe5e5;
   min-height: 300px;
   font-family: inherit;
-  line-height: 1.55;
+  line-height: 1.45;
   font-size: 15px;
 }
 
@@ -331,7 +346,7 @@ input:focus {
 .tab-btn {
   flex: 1;
   border: 1px solid rgba(255, 72, 72, 0.16);
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
   color: #ffdede;
   padding: 11px 14px;
   border-radius: 14px;
