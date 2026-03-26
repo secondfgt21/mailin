@@ -22,7 +22,9 @@ export default async function handler(req, res) {
 
     let query = supabase
       .from("emails")
-      .select("id, mail_account_id, from_name, from_email, subject, body_text, received_at, created_at")
+      .select(
+        "id, mail_account_id, from_name, from_email, subject, body_text, received_at, created_at"
+      )
       .eq("user_id", user.id)
       .order("received_at", { ascending: false })
       .limit(100);
