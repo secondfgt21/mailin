@@ -1,12 +1,12 @@
 const loginView = document.getElementById("loginView");
 const dashboardView = document.getElementById("dashboardView");
+const inboxPage = document.getElementById("inboxPage");
+const detailPage = document.getElementById("detailPage");
 const loginForm = document.getElementById("loginForm");
 const createUserForm = document.getElementById("createUserForm");
 const loginMsg = document.getElementById("loginMsg");
 const userEmail = document.getElementById("userEmail");
 const emailList = document.getElementById("emailList");
-const emptyState = document.getElementById("emptyState");
-const emailDetail = document.getElementById("emailDetail");
 const detailSubject = document.getElementById("detailSubject");
 const detailFrom = document.getElementById("detailFrom");
 const detailDate = document.getElementById("detailDate");
@@ -15,8 +15,14 @@ const syncBtn = document.getElementById("syncBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const showLoginTab = document.getElementById("showLoginTab");
 const showCreateTab = document.getElementById("showCreateTab");
+const backBtn = document.getElementById("backBtn");
+const inboxCount = document.getElementById("inboxCount");
+const syncStatus = document.getElementById("syncStatus");
+const detailSyncStatus = document.getElementById("detailSyncStatus");
 
 let emails = [];
+let syncTimer = null;
+let selectedEmailId = null;
 
 function setToken(token) {
   localStorage.setItem("impura_token", token);
@@ -26,6 +32,13 @@ function getToken() {
 }
 function clearToken() {
   localStorage.removeItem("impura_token");
+  localStorage.removeItem("impura_user_email");
+}
+function setUserEmailCache(email) {
+  localStorage.setItem("impura_user_email", email);
+}
+function getUserEmailCache() {
+  return localStorage.getItem("impura_user_email");
 }
 
 async function api(path, options = {}) {
@@ -43,6 +56,7 @@ async function api(path, options = {}) {
 }
 
 function showLogin() {
+  stopAutoSync();
   loginView.classList.remove("hidden");
   dashboardView.classList.add("hidden");
 }
@@ -61,6 +75,11 @@ function setTab(mode) {
   loginMsg.textContent = "";
 }
 
+function setSyncText(text) {
+  syncStatus.textContent = text;
+  detailSyncStatus.textContent = text;
+}
+
 function formatDate(v) {
   if (!v) return "-";
   try {
@@ -70,37 +89,30 @@ function formatDate(v) {
   }
 }
 
-function renderEmailList() {
-  emailList.innerHTML = "";
-  if (!emails.length) {
-    emailList.innerHTML = '<div class="email-item"><div class="subject">Belum ada email.</div></div>';
-    emailDetail.classList.add("hidden");
-    emptyState.classList.remove("hidden");
-    return;
+function shortDate(v) {
+  if (!v) return "-";
+  try {
+    const d = new Date(v);
+    return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) + " " +
+      d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return v;
   }
-
-  emails.forEach((item, index) => {
-    const div = document.createElement("div");
-    div.className = "email-item" + (index === 0 ? " active" : "");
-    div.innerHTML = `
-      <div class="from">${item.from_name || item.from_email || "(Unknown sender)"}</div>
-      <div class="subject">${item.subject || "(Tanpa subject)"}</div>
-      <div class="date">${formatDate(item.received_at || item.created_at)}</div>
-    `;
-    div.onclick = () => {
-      document.querySelectorAll(".email-item").forEach(x => x.classList.remove("active"));
-      div.classList.add("active");
-      renderEmailDetail(item);
-    };
-    emailList.appendChild(div);
-  });
-
-  renderEmailDetail(emails[0]);
 }
 
-function renderEmailDetail(item) {
-  emptyState.classList.add("hidden");
-  emailDetail.classList.remove("hidden");
+function buildSnippet(text) {
+  return (text || "").replace(/\s+/g, " ").trim().slice(0, 120);
+}
+
+function showInboxPage() {
+  inboxPage.classList.remove("hidden");
+  detailPage.classList.add("hidden");
+}
+
+function showDetailPage(item) {
+  selectedEmailId = item.id;
+  inboxPage.classList.add("hidden");
+  detailPage.classList.remove("hidden");
   detailSubject.textContent = item.subject || "(Tanpa subject)";
   detailFrom.textContent = item.from_name
     ? `${item.from_name} <${item.from_email || "-"}>`
@@ -109,23 +121,94 @@ function renderEmailDetail(item) {
   detailBody.textContent = item.body_text || "(Isi email kosong)";
 }
 
+function renderEmailList() {
+  emailList.innerHTML = "";
+  inboxCount.textContent = `${emails.length} email`;
+
+  if (!emails.length) {
+    emailList.innerHTML = '<div class="empty-list">Belum ada email di server kamu.</div>';
+    showInboxPage();
+    return;
+  }
+
+  emails.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "gmail-row" + (item.id === selectedEmailId ? " active" : "");
+    row.innerHTML = `
+      <div class="sender">${item.from_name || item.from_email || "(Unknown sender)"}</div>
+      <div class="subject-line">
+        <span class="subject">${item.subject || "(Tanpa subject)"}</span>
+        <span class="snippet">${buildSnippet(item.body_text)}</span>
+      </div>
+      <div class="mail-date">${shortDate(item.received_at || item.created_at)}</div>
+    `;
+    row.onclick = () => {
+      document.querySelectorAll(".gmail-row").forEach(x => x.classList.remove("active"));
+      row.classList.add("active");
+      showDetailPage(item);
+      history.replaceState({}, "", "#mail-" + item.id);
+    };
+    emailList.appendChild(row);
+  });
+
+  if (!selectedEmailId) {
+    selectedEmailId = emails[0].id;
+  }
+}
+
 async function loadMe() {
   const me = await api("/api/me");
   userEmail.textContent = me.email;
+  setUserEmailCache(me.email);
 }
 
-async function syncAndLoadEmails() {
+async function fetchEmailsOnly() {
+  const data = await api("/api/emails");
+  emails = data.emails || [];
+  renderEmailList();
+
+  if (window.location.hash.startsWith("#mail-")) {
+    const id = Number(window.location.hash.replace("#mail-", ""));
+    const selected = emails.find(x => x.id === id);
+    if (selected) {
+      showDetailPage(selected);
+      return;
+    }
+  }
+
+  showInboxPage();
+}
+
+async function syncAndLoadEmails(showLoading = true) {
+  if (showLoading) setSyncText("Sedang sync...");
   syncBtn.disabled = true;
   syncBtn.textContent = "Sync...";
   try {
     await api("/api/sync", { method: "POST" });
-    const data = await api("/api/emails");
-    emails = data.emails || [];
-    renderEmailList();
+    await fetchEmailsOnly();
+    setSyncText("Auto sync aktif");
   } finally {
     syncBtn.disabled = false;
-    syncBtn.textContent = "Sync Inbox";
+    syncBtn.textContent = "Sync Sekarang";
   }
+}
+
+function stopAutoSync() {
+  if (syncTimer) {
+    clearInterval(syncTimer);
+    syncTimer = null;
+  }
+}
+
+function startAutoSync() {
+  stopAutoSync();
+  syncTimer = setInterval(async () => {
+    try {
+      await syncAndLoadEmails(false);
+    } catch (err) {
+      setSyncText("Sync gagal");
+    }
+  }, 30000);
 }
 
 loginForm.addEventListener("submit", async (e) => {
@@ -141,10 +224,13 @@ loginForm.addEventListener("submit", async (e) => {
       body: JSON.stringify(payload),
     });
     setToken(data.token);
+    setUserEmailCache(data.user?.email || payload.email);
+    userEmail.textContent = data.user?.email || payload.email;
     showDashboard();
     loginMsg.textContent = "";
-    await loadMe();
-    await syncAndLoadEmails();
+    showInboxPage();
+    await syncAndLoadEmails(true);
+    startAutoSync();
   } catch (err) {
     loginMsg.textContent = err.message;
   }
@@ -174,34 +260,53 @@ createUserForm.addEventListener("submit", async (e) => {
 
 showLoginTab.addEventListener("click", () => setTab("login"));
 showCreateTab.addEventListener("click", () => setTab("create"));
+backBtn.addEventListener("click", () => {
+  showInboxPage();
+  history.replaceState({}, "", "#inbox");
+});
 
 syncBtn.addEventListener("click", async () => {
   try {
-    await syncAndLoadEmails();
+    await syncAndLoadEmails(true);
   } catch (err) {
     alert(err.message);
+    setSyncText("Sync gagal");
   }
 });
 
 logoutBtn.addEventListener("click", () => {
   clearToken();
   emails = [];
+  selectedEmailId = null;
   showLogin();
   setTab("login");
 });
 
 (async function init() {
   setTab("login");
-  if (!getToken()) {
+  const token = getToken();
+  const cachedEmail = getUserEmailCache();
+
+  if (!token) {
     showLogin();
     return;
   }
+
+  userEmail.textContent = cachedEmail || "Sedang memuat...";
+  showDashboard();
+  showInboxPage();
+  setSyncText("Mengecek sesi...");
+
   try {
     await loadMe();
-    showDashboard();
-    await syncAndLoadEmails();
+    await fetchEmailsOnly();
+    await syncAndLoadEmails(false);
+    startAutoSync();
   } catch (err) {
-    clearToken();
-    showLogin();
+    setSyncText("Sesi gagal dimuat");
+    if (!cachedEmail) {
+      clearToken();
+      showLogin();
+    }
   }
 })();
