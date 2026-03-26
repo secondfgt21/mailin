@@ -4,12 +4,16 @@ const inboxPage = document.getElementById("inboxPage");
 const detailPage = document.getElementById("detailPage");
 const loginForm = document.getElementById("loginForm");
 const createUserForm = document.getElementById("createUserForm");
+const addAccountForm = document.getElementById("addAccountForm");
 const loginMsg = document.getElementById("loginMsg");
+const accountMsg = document.getElementById("accountMsg");
 const userEmail = document.getElementById("userEmail");
 const emailList = document.getElementById("emailList");
+const accountList = document.getElementById("accountList");
 const detailSubject = document.getElementById("detailSubject");
 const detailFrom = document.getElementById("detailFrom");
 const detailDate = document.getElementById("detailDate");
+const detailAccount = document.getElementById("detailAccount");
 const detailBody = document.getElementById("detailBody");
 const syncBtn = document.getElementById("syncBtn");
 const logoutBtn = document.getElementById("logoutBtn");
@@ -19,13 +23,13 @@ const backBtn = document.getElementById("backBtn");
 const inboxCount = document.getElementById("inboxCount");
 const syncStatus = document.getElementById("syncStatus");
 const detailSyncStatus = document.getElementById("detailSyncStatus");
+const toggleAddAccountBtn = document.getElementById("toggleAddAccountBtn");
 
 let emails = [];
+let accounts = [];
 let syncTimer = null;
 let selectedEmailId = null;
-let accounts = [];
 let selectedAccountId = null;
-
 
 function setToken(token) {
   localStorage.setItem("impura_token", token);
@@ -38,6 +42,7 @@ function getToken() {
 function clearToken() {
   localStorage.removeItem("impura_token");
   localStorage.removeItem("impura_user_email");
+  localStorage.removeItem("impura_selected_account_id");
 }
 
 function setUserEmailCache(email) {
@@ -46,6 +51,20 @@ function setUserEmailCache(email) {
 
 function getUserEmailCache() {
   return localStorage.getItem("impura_user_email");
+}
+
+function setSelectedAccount(id) {
+  selectedAccountId = id ? Number(id) : null;
+  if (selectedAccountId) {
+    localStorage.setItem("impura_selected_account_id", String(selectedAccountId));
+  } else {
+    localStorage.removeItem("impura_selected_account_id");
+  }
+}
+
+function getStoredSelectedAccount() {
+  const v = localStorage.getItem("impura_selected_account_id");
+  return v ? Number(v) : null;
 }
 
 async function api(path, options = {}) {
@@ -134,6 +153,67 @@ function showInboxPage() {
   detailPage.classList.add("hidden");
 }
 
+function renderAccounts() {
+  accountList.innerHTML = "";
+
+  if (!accounts.length) {
+    accountList.innerHTML = '<div class="empty-list">Belum ada akun email.</div>';
+    return;
+  }
+
+  const allChip = document.createElement("div");
+  allChip.className = "account-chip" + (!selectedAccountId ? " active" : "");
+  allChip.innerHTML = '<div class="email">Semua akun</div>';
+  allChip.onclick = async () => {
+    setSelectedAccount(null);
+    renderAccounts();
+    await fetchEmailsOnly();
+    showInboxPage();
+  };
+  accountList.appendChild(allChip);
+
+  accounts.forEach((acc) => {
+    const chip = document.createElement("div");
+    chip.className =
+      "account-chip" + (selectedAccountId === acc.id ? " active" : "");
+
+    chip.innerHTML = `
+      <div class="email">${acc.email}</div>
+      <button class="remove" type="button">hapus</button>
+    `;
+
+    chip.onclick = async (e) => {
+      if (e.target.classList.contains("remove")) return;
+      setSelectedAccount(acc.id);
+      renderAccounts();
+      await fetchEmailsOnly();
+      showInboxPage();
+    };
+
+    chip.querySelector(".remove").onclick = async (e) => {
+      e.stopPropagation();
+
+      if (!confirm("Hapus akun ini dari panel?")) return;
+
+      try {
+        await api("/api/accounts?id=" + acc.id, { method: "DELETE" });
+        accountMsg.textContent = "Akun dihapus.";
+
+        if (selectedAccountId === acc.id) {
+          setSelectedAccount(null);
+        }
+
+        await loadAccounts();
+        await fetchEmailsOnly();
+      } catch (err) {
+        accountMsg.textContent = err.message;
+      }
+    };
+
+    accountList.appendChild(chip);
+  });
+}
+
 function showDetailPage(item) {
   selectedEmailId = item.id;
   inboxPage.classList.add("hidden");
@@ -144,6 +224,10 @@ function showDetailPage(item) {
     ? `${item.from_name} <${item.from_email || "-"}>`
     : (item.from_email || "-");
   detailDate.textContent = formatDate(item.received_at || item.created_at);
+
+  const acc = accounts.find((a) => a.id === item.mail_account_id);
+  detailAccount.textContent = acc?.email || "-";
+
   detailBody.textContent = cleanBody(item.body_text);
 }
 
@@ -163,11 +247,13 @@ function renderEmailList() {
     row.className =
       "gmail-row" + (item.id === selectedEmailId ? " active" : "");
 
+    const acc = accounts.find((a) => a.id === item.mail_account_id);
+
     row.innerHTML = `
       <div class="sender">${item.from_name || item.from_email || "(Unknown sender)"}</div>
       <div class="subject-line">
         <span class="subject">${item.subject || "(Tanpa subject)"}</span>
-        <span class="snippet">${buildSnippet(item.body_text)}</span>
+        <span class="snippet">${buildSnippet(item.body_text)}${acc ? " • " + acc.email : ""}</span>
       </div>
       <div class="mail-date">${shortDate(item.received_at || item.created_at)}</div>
     `;
@@ -184,7 +270,7 @@ function renderEmailList() {
     emailList.appendChild(row);
   });
 
-  if (!selectedEmailId) {
+  if (!selectedEmailId && emails[0]) {
     selectedEmailId = emails[0].id;
   }
 }
@@ -193,10 +279,35 @@ async function loadMe() {
   const me = await api("/api/me");
   userEmail.textContent = me.email;
   setUserEmailCache(me.email);
+
+  if (!selectedAccountId && me.primary_account_id) {
+    const stored = getStoredSelectedAccount();
+    if (stored) {
+      selectedAccountId = stored;
+    }
+  }
+}
+
+async function loadAccounts() {
+  const data = await api("/api/accounts");
+  accounts = data.accounts || [];
+
+  if (
+    selectedAccountId &&
+    !accounts.find((a) => a.id === selectedAccountId)
+  ) {
+    setSelectedAccount(null);
+  }
+
+  renderAccounts();
 }
 
 async function fetchEmailsOnly() {
-  const data = await api("/api/emails");
+  const url = selectedAccountId
+    ? `/api/emails?account_id=${selectedAccountId}`
+    : "/api/emails";
+
+  const data = await api(url);
   emails = data.emails || [];
   renderEmailList();
 
@@ -218,7 +329,12 @@ async function syncAndLoadEmails(showLoading = true) {
   syncBtn.textContent = "Sync...";
 
   try {
-    await api("/api/sync", { method: "POST" });
+    const url = selectedAccountId
+      ? `/api/sync?account_id=${selectedAccountId}`
+      : "/api/sync";
+
+    await api(url, { method: "POST" });
+    await loadAccounts();
     await fetchEmailsOnly();
     setSyncText("Auto sync aktif");
   } finally {
@@ -230,16 +346,17 @@ async function syncAndLoadEmails(showLoading = true) {
 function stopAutoSync() {
   if (syncTimer) {
     clearInterval(syncTimer);
-    syncTimer = null;
   }
+  syncTimer = null;
 }
 
 function startAutoSync() {
   stopAutoSync();
+
   syncTimer = setInterval(async () => {
     try {
       await syncAndLoadEmails(false);
-    } catch (err) {
+    } catch {
       setSyncText("Sync gagal");
     }
   }, 30000);
@@ -268,6 +385,8 @@ loginForm.addEventListener("submit", async (e) => {
     loginMsg.textContent = "";
     showInboxPage();
 
+    await loadMe();
+    await loadAccounts();
     await syncAndLoadEmails(true);
     startAutoSync();
   } catch (err) {
@@ -300,57 +419,23 @@ createUserForm.addEventListener("submit", async (e) => {
   }
 });
 
-showLoginTab.addEventListener("click", () => setTab("login"));
-showCreateTab.addEventListener("click", () => setTab("create"));
-
-backBtn.addEventListener("click", () => {
-  showInboxPage();
-  history.replaceState({}, "", "#inbox");
-});
-
-syncBtn.addEventListener("click", async () => {
-  try {
-    await syncAndLoadEmails(true);
-  } catch (err) {
-    alert(err.message);
-    setSyncText("Sync gagal");
-  }
-});
-
-logoutBtn.addEventListener("click", () => {
-  clearToken();
-  emails = [];
-  selectedEmailId = null;
-  showLogin();
-  setTab("login");
-});
-
-(async function init() {
-  setTab("login");
-
-  const token = getToken();
-  const cachedEmail = getUserEmailCache();
-
-  if (!token) {
-    showLogin();
-    return;
-  }
-
-  userEmail.textContent = cachedEmail || "Sedang memuat...";
-  showDashboard();
-  showInboxPage();
-  setSyncText("Mengecek sesi...");
+addAccountForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  accountMsg.textContent = "Sedang menambah akun...";
 
   try {
-    await loadMe();
-    await fetchEmailsOnly();
-    await syncAndLoadEmails(false);
-    startAutoSync();
-  } catch (err) {
-    setSyncText("Sesi gagal dimuat");
-    if (!cachedEmail) {
-      clearToken();
-      showLogin();
-    }
-  }
-})();
+    const payload = {
+      email: document.getElementById("addAccountEmail").value.trim(),
+      mail_password: document.getElementById("addAccountPassword").value
+    };
+
+    await api("/api/accounts", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    accountMsg.textContent = "Akun berhasil ditambahkan.";
+    addAccountForm.reset();
+    addAccountForm.classList.add("hidden");
+    await loadAccounts();
+  } catch (
