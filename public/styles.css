@@ -308,17 +308,18 @@ input:focus {
 }
 
 .body {
-  white-space: pre-wrap;
+  white-space: pre-line;
   word-break: break-word;
   margin: 0;
-  padding: 16px;
+  padding: 16px 18px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 70, 90, 0.12);
   color: #ffe5e5;
-  min-height: 58vh;
+  min-height: 300px;
   font-family: inherit;
-  line-height: 1.65;
+  line-height: 1.55;
+  font-size: 15px;
 }
 
 .tab-row {
