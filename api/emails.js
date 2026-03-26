@@ -3,6 +3,7 @@ import {
   sendJson,
   getClaimsFromRequest,
   getUserById,
+  ensurePrimaryAccountForUser,
   supabase,
   httpError
 } from "./_lib.js";
@@ -15,16 +16,28 @@ export default async function handler(req, res) {
     const user = await getUserById(Number(claims.sub));
     if (!user) throw httpError(404, "User tidak ditemukan.");
 
-    const { data, error } = await supabase
+    await ensurePrimaryAccountForUser(user);
+
+    const accountId = Number(req.query.account_id || 0);
+
+    let query = supabase
       .from("emails")
-      .select("id, from_name, from_email, subject, body_text, received_at, created_at")
+      .select("id, mail_account_id, from_name, from_email, subject, body_text, received_at, created_at")
       .eq("user_id", user.id)
       .order("received_at", { ascending: false })
       .limit(100);
 
+    if (accountId) {
+      query = query.eq("mail_account_id", accountId);
+    }
+
+    const { data, error } = await query;
     if (error) throw httpError(500, error.message);
+
     return sendJson(res, 200, { ok: true, emails: data || [] });
   } catch (error) {
-    return sendJson(res, error.status || 500, { detail: error.message || "Server error." });
+    return sendJson(res, error.status || 500, {
+      detail: error.message || "Server error."
+    });
   }
 }
