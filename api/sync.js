@@ -31,30 +31,32 @@ export default async function handler(req, res) {
     }
 
     const accounts = await listAccountsForUser(user.id);
+    if (!accounts.length) {
+      throw httpError(400, "Tidak ada akun email.");
+    }
 
-if (!accounts || !accounts.length) {
-  throw httpError(400, "Tidak ada akun email.");
-}
+    let totalImported = 0;
+    const results = [];
 
-let totalImported = 0;
-const results = [];
+    for (const account of accounts) {
+      const result = await syncMailForAccount(user, account);
+      totalImported += Number(result.imported || 0);
+      results.push({
+        account_id: account.id,
+        email: account.email,
+        ...result
+      });
+    }
 
-for (const account of accounts) {
-  if (!account || !account.mail_password_encrypted) {
-    console.log("SKIP account rusak:", account);
-    continue;
-  }
-
-  try {
-    const result = await syncMailForAccount(user, account);
-    totalImported += Number(result.imported || 0);
-
-    results.push({
-      account_id: account.id,
-      email: account.email,
-      ...result
+    return sendJson(res, 200, {
+      ok: true,
+      mode: "all",
+      totalImported,
+      results
     });
-  } catch (err) {
-    console.log("ERROR account:", account.email, err.message);
+  } catch (error) {
+    return sendJson(res, error.status || 500, {
+      detail: error.message || "Server error."
+    });
   }
 }
