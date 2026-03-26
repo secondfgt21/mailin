@@ -118,7 +118,12 @@ function showDetailPage(item) {
     ? `${item.from_name} <${item.from_email || "-"}>`
     : (item.from_email || "-");
   detailDate.textContent = formatDate(item.received_at || item.created_at);
-  detailBody.textContent = item.body_text || "(Isi email kosong)";
+  const cleanedBody = (item.body_text || "(Isi email kosong)")
+  .replace(/\n{3,}/g, "\n\n")
+  .replace(/[ \t]+\n/g, "\n")
+  .trim();
+
+detailBody.textContent = cleanedBody;
 }
 
 function renderEmailList() {
