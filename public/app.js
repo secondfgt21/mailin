@@ -438,4 +438,70 @@ addAccountForm.addEventListener("submit", async (e) => {
     addAccountForm.reset();
     addAccountForm.classList.add("hidden");
     await loadAccounts();
-  } catch (
+  } catch (err) {
+    accountMsg.textContent = err.message;
+  }
+});
+
+toggleAddAccountBtn.addEventListener("click", () => {
+  addAccountForm.classList.toggle("hidden");
+});
+
+showLoginTab.addEventListener("click", () => setTab("login"));
+showCreateTab.addEventListener("click", () => setTab("create"));
+
+backBtn.addEventListener("click", () => {
+  showInboxPage();
+  history.replaceState({}, "", "#inbox");
+});
+
+syncBtn.addEventListener("click", async () => {
+  try {
+    await syncAndLoadEmails(true);
+  } catch (err) {
+    alert(err.message);
+    setSyncText("Sync gagal");
+  }
+});
+
+logoutBtn.addEventListener("click", () => {
+  clearToken();
+  emails = [];
+  accounts = [];
+  selectedEmailId = null;
+  selectedAccountId = null;
+  showLogin();
+  setTab("login");
+});
+
+(async function init() {
+  setTab("login");
+  selectedAccountId = getStoredSelectedAccount();
+
+  const token = getToken();
+  const cachedEmail = getUserEmailCache();
+
+  if (!token) {
+    showLogin();
+    return;
+  }
+
+  userEmail.textContent = cachedEmail || "Sedang memuat...";
+  showDashboard();
+  showInboxPage();
+  setSyncText("Mengecek sesi...");
+
+  try {
+    await loadMe();
+    await loadAccounts();
+    await fetchEmailsOnly();
+    await syncAndLoadEmails(false);
+    startAutoSync();
+  } catch (err) {
+    setSyncText("Sesi gagal dimuat");
+    if (!cachedEmail) {
+      clearToken();
+      showLogin();
+    }
+  }
+})();
