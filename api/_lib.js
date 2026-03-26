@@ -215,13 +215,45 @@ export async function syncMailForUser(user) {
 }
 
 function extractTextFromRaw(raw) {
+  if (!raw) return "";
+
   const parts = raw.split(/\r?\n\r?\n/);
   if (parts.length < 2) return raw.slice(0, 20000);
 
-  return parts
-    .slice(1)
-    .join("\n\n")
-    .replace(/<[^>]+>/g, "")
-    .trim()
-    .slice(0, 20000);
+  let body = parts.slice(1).join("\n\n");
+
+  // hapus style, script, head, xml, comments
+  body = body
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<head[\s\S]*?<\/head>/gi, " ")
+    .replace(/<xml[\s\S]*?<\/xml>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ");
+
+  // ubah line break HTML jadi newline
+  body = body
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/tr>/gi, "\n");
+
+  // hapus semua tag HTML lain
+  body = body.replace(/<[^>]+>/g, " ");
+
+  // decode entity HTML dasar
+  body = body
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+
+  // rapikan spasi & newline
+  body = body
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return body.slice(0, 20000);
 }
