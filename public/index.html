@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Impura Mail Panel</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <main class="container">
+    <section class="card login-card" id="loginView">
+      <div class="brand-wrap">
+        <div class="brand-dot"></div>
+        <div>
+          <h1>Impura Mail</h1>
+          <p class="muted">Login untuk melihat inbox email kamu.</p>
+        </div>
+      </div>
+
+      <form id="loginForm" class="form">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="buyer@impura.id" required />
+        <label>Password</label>
+        <input type="password" id="password" placeholder="••••••••" required />
+        <button type="submit" class="btn">Login</button>
+      </form>
+
+      <p id="loginMsg" class="msg"></p>
+    </section>
+
+    <section class="dashboard hidden" id="dashboardView">
+      <div class="topbar card">
+        <div>
+          <h2 id="userEmail">-</h2>
+          <p class="muted">Nuansa glow merah hitam • inbox sederhana</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-secondary" id="syncBtn">Sync Inbox</button>
+          <button class="btn btn-ghost" id="logoutBtn">Logout</button>
+        </div>
+      </div>
+
+      <div class="layout">
+        <aside class="card sidebar">
+          <div class="sidebar-title">Inbox</div>
+          <div id="emailList" class="email-list"></div>
+        </aside>
+
+        <section class="card viewer">
+          <div id="emptyState" class="empty-state">
+            Pilih email di kiri untuk melihat isi pesan.
+          </div>
+
+          <article id="emailDetail" class="email-detail hidden">
+            <h3 id="detailSubject"></h3>
+            <div class="meta">
+              <div><span>Dari:</span> <strong id="detailFrom"></strong></div>
+              <div><span>Masuk:</span> <strong id="detailDate"></strong></div>
+            </div>
+            <pre id="detailBody" class="body"></pre>
+          </article>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
