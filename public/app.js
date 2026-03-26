@@ -23,6 +23,9 @@ const detailSyncStatus = document.getElementById("detailSyncStatus");
 let emails = [];
 let syncTimer = null;
 let selectedEmailId = null;
+let accounts = [];
+let selectedAccountId = null;
+
 
 function setToken(token) {
   localStorage.setItem("impura_token", token);
