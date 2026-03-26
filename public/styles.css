@@ -193,6 +193,54 @@ input:focus {
   font-size: 13px;
 }
 
+.account-bar {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.account-bar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.account-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.account-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 70, 90, 0.12);
+  background: rgba(255,255,255,0.02);
+  cursor: pointer;
+}
+
+.account-chip.active {
+  background: rgba(255, 42, 72, 0.08);
+  border-color: rgba(255, 70, 90, 0.35);
+}
+
+.account-chip .email {
+  font-weight: 700;
+}
+
+.account-chip .remove {
+  background: transparent;
+  color: #ffb1b1;
+  border: 0;
+  cursor: pointer;
+  font-size: 12px;
+}
+
 .gmail-shell {
   overflow: hidden;
 }
