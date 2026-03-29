@@ -333,10 +333,30 @@ async function syncAndLoadEmails(showLoading = true) {
       ? `/api/sync?account_id=${selectedAccountId}`
       : "/api/sync";
 
-    await api(url, { method: "POST" });
+    const result = await api(url, { method: "POST" });
+
     await loadAccounts();
     await fetchEmailsOnly();
-    setSyncText("Auto sync aktif");
+
+    if (result?.mode === "all" && Array.isArray(result.results)) {
+      const failed = result.results.filter((x) => x.ok === false);
+
+      if (failed.length) {
+        const names = failed.map((x) => x.email).join(", ");
+        setSyncText(`Sebagian gagal (${failed.length})`);
+        alert(`Akun yang gagal sync: ${names}`);
+      } else {
+        setSyncText("Auto sync aktif");
+      }
+    } else if (result?.mode === "single" && result.ok === false) {
+      setSyncText("Akun ini gagal sync");
+      alert(result.result?.error || "Sync akun gagal");
+    } else {
+      setSyncText("Auto sync aktif");
+    }
+  } catch (err) {
+    setSyncText("Sync gagal");
+    alert(err.message || "Sync gagal");
   } finally {
     syncBtn.disabled = false;
     syncBtn.textContent = "Sync Sekarang";
