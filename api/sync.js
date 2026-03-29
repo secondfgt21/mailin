@@ -26,8 +26,30 @@ export default async function handler(req, res) {
       const account = await getAccountById(user.id, accountId);
       if (!account) throw httpError(404, "Akun email tidak ditemukan.");
 
-      const result = await syncMailForAccount(user, account);
-      return sendJson(res, 200, { ok: true, mode: "single", result });
+      try {
+        const result = await syncMailForAccount(user, account);
+        return sendJson(res, 200, {
+          ok: true,
+          mode: "single",
+          result: {
+            account_id: account.id,
+            email: account.email,
+            imported: result.imported || 0,
+            message: result.message || "Sync selesai"
+          }
+        });
+      } catch (error) {
+        return sendJson(res, 200, {
+          ok: false,
+          mode: "single",
+          result: {
+            account_id: account.id,
+            email: account.email,
+            imported: 0,
+            error: error.message || "Sync akun gagal"
+          }
+        });
+      }
     }
 
     const accounts = await listAccountsForUser(user.id);
@@ -39,13 +61,26 @@ export default async function handler(req, res) {
     const results = [];
 
     for (const account of accounts) {
-      const result = await syncMailForAccount(user, account);
-      totalImported += Number(result.imported || 0);
-      results.push({
-        account_id: account.id,
-        email: account.email,
-        ...result
-      });
+      try {
+        const result = await syncMailForAccount(user, account);
+        totalImported += Number(result.imported || 0);
+
+        results.push({
+          account_id: account.id,
+          email: account.email,
+          imported: result.imported || 0,
+          message: result.message || "Sync selesai",
+          ok: true
+        });
+      } catch (error) {
+        results.push({
+          account_id: account.id,
+          email: account.email,
+          imported: 0,
+          error: error.message || "Sync akun gagal",
+          ok: false
+        });
+      }
     }
 
     return sendJson(res, 200, {
