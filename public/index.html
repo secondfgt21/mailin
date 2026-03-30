@@ -16,7 +16,7 @@
         <div class="brand-dot"></div>
         <div>
           <h1>Impura Mail</h1>
-          <p class="muted">Login untuk menerima inbox.</p>
+          <p class="muted">Login untuk mendapatkan inbox.</p>
         </div>
       </div>
 
@@ -24,7 +24,7 @@
         <label>Email</label>
         <input type="email" id="email" placeholder="contoh@impura.id" required />
         <label>Password</label>
-        <input type="password" id="password" placeholder="••••••••" required />
+        <input type="password" id="password" placeholder="password" required />
         <button type="submit" class="btn">Login</button>
       </form>
 
@@ -35,14 +35,32 @@
       <div class="topbar card">
         <div>
           <h2 id="userEmail">-</h2>
-          <p class="muted">Login untuk mendapatkan inbox</p>
+          <p class="muted">Bisa login beberapa akun</p>
         </div>
         <div class="topbar-actions">
-          <span class="sync-badge" id="syncStatus">Siap sync</span>
+          <span class="sync-badge" id="syncStatus">Siap</span>
           <button class="btn btn-secondary" id="syncBtn">Sync Sekarang</button>
           <button class="btn btn-ghost" id="logoutBtn">Logout</button>
         </div>
       </div>
+
+      <section class="card account-bar">
+        <div class="account-bar-head">
+          <div class="gmail-title small">Akun Email</div>
+          <button class="btn btn-secondary" id="toggleAddAccountBtn" type="button">+ Tambah Akun</button>
+        </div>
+
+        <form id="addAccountForm" class="form hidden slim-form">
+          <label>Email</label>
+          <input type="email" id="addAccountEmail" placeholder="akunlain@impura.id" />
+          <label>Password</label>
+          <input type="password" id="addAccountPassword" placeholder="password inbox mailin" />
+          <button type="submit" class="btn">Tambah Akun</button>
+        </form>
+
+        <div id="accountMsg" class="msg"></div>
+        <div id="accountList" class="account-list"></div>
+      </section>
 
       <section class="card gmail-shell" id="inboxPage">
         <div class="gmail-toolbar">
@@ -55,14 +73,15 @@
       <section class="card detail-page hidden" id="detailPage">
         <div class="detail-topbar">
           <button class="back-btn" id="backBtn" type="button">← Kembali</button>
-          <div class="sync-badge" id="detailSyncStatus">Auto sync aktif</div>
+          <div class="sync-badge" id="detailSyncStatus">Siap</div>
         </div>
 
-        <article id="emailDetail" class="mail-open">
+        <article class="mail-open">
           <h3 id="detailSubject"></h3>
           <div class="meta">
             <div><span>Dari:</span> <strong id="detailFrom"></strong></div>
             <div><span>Masuk:</span> <strong id="detailDate"></strong></div>
+            <div><span>Akun:</span> <strong id="detailAccount"></strong></div>
           </div>
           <div id="detailBody" class="body"></div>
         </article>
