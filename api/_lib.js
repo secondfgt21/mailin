@@ -59,6 +59,36 @@ function cleanText(text) {
     .trim();
 }
 
+export async function verifyImapLogin(account) {
+  const client = new ImapFlow({
+    host: MAILIN_IMAP_HOST,
+    port: MAILIN_IMAP_PORT,
+    secure: MAILIN_IMAP_TLS,
+    auth: {
+      user: account.email,
+      pass: account.password
+    },
+    logger: false
+  });
+
+  try {
+    await client.connect();
+    await client.mailboxOpen("INBOX");
+    return {
+      ok: true,
+      email: account.email
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      email: account.email,
+      error: error.message || "Login IMAP gagal"
+    };
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
 export async function fetchInboxForAccount(account) {
   const client = new ImapFlow({
     host: MAILIN_IMAP_HOST,
