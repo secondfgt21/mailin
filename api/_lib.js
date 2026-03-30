@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { ImapFlow } from "imapflow";
 import crypto from "crypto";
@@ -17,10 +16,7 @@ export const supabase = createClient(
   SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
   {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
+    auth: { autoRefreshToken: false, persistSession: false }
   }
 );
 
@@ -28,8 +24,7 @@ const jwtSecretBytes = new TextEncoder().encode(JWT_SECRET);
 
 function base64UrlToBuffer(value) {
   const padLength = (4 - (value.length % 4)) % 4;
-  const padded =
-    value.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat(padLength);
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat(padLength);
   return Buffer.from(padded, "base64");
 }
 
@@ -45,15 +40,16 @@ export function encryptValue(plainText) {
   const key = getEncryptionKey();
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-  const encrypted = Buffer.concat([
-    cipher.update(plainText, "utf8"),
-    cipher.final()
-  ]);
+  const encrypted = Buffer.concat([cipher.update(plainText, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
   return Buffer.concat([iv, tag, encrypted]).toString("base64url");
 }
 
 export function decryptValue(cipherText) {
+  if (!cipherText) {
+    throw new Error("Password email kosong.");
+  }
+
   const key = getEncryptionKey();
   const data = Buffer.from(cipherText, "base64url");
   const iv = data.subarray(0, 12);
@@ -63,24 +59,16 @@ export function decryptValue(cipherText) {
   const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
   decipher.setAuthTag(tag);
 
-  return Buffer.concat([
-    decipher.update(encrypted),
-    decipher.final()
-  ]).toString("utf8");
+  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
 }
 
-export async function hashPassword(password) {
-  return bcrypt.hash(password, 10);
-}
-
-export async function verifyPassword(password, hash) {
-  return bcrypt.compare(password, hash);
-}
-
-export async function createToken(user) {
-  return new SignJWT({ email: user.email })
+export async function createToken(email, encryptedMailPassword) {
+  return new SignJWT({
+    email,
+    mail_password_encrypted: encryptedMailPassword
+  })
     .setProtectedHeader({ alg: "HS256" })
-    .setSubject(String(user.id))
+    .setSubject(email)
     .setExpirationTime("7d")
     .sign(jwtSecretBytes);
 }
@@ -99,73 +87,6 @@ export async function getClaimsFromRequest(req) {
   } catch {
     throw httpError(401, "Token tidak valid.");
   }
-}
-
-export async function getUserByEmail(email) {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("email", email)
-    .limit(1);
-
-  if (error) throw httpError(500, error.message);
-  return data?.[0] || null;
-}
-
-export async function getUserById(id) {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", id)
-    .limit(1);
-
-  if (error) throw httpError(500, error.message);
-  return data?.[0] || null;
-}
-
-export async function listAccountsForUser(userId) {
-  const { data, error } = await supabase
-    .from("mail_accounts")
-    .select("id, owner_user_id, email, mail_password_encrypted, is_active, created_at")
-    .eq("owner_user_id", userId)
-    .order("created_at", { ascending: true });
-
-  if (error) throw httpError(500, error.message);
-  return data || [];
-}
-
-export async function getAccountById(userId, accountId) {
-  const { data, error } = await supabase
-    .from("mail_accounts")
-    .select("*")
-    .eq("owner_user_id", userId)
-    .eq("id", accountId)
-    .limit(1);
-
-  if (error) throw httpError(500, error.message);
-  return data?.[0] || null;
-}
-
-export async function ensurePrimaryAccountForUser(user) {
-  const accounts = await listAccountsForUser(user.id);
-  const exists = accounts.find(
-    (a) => a.email.toLowerCase() === String(user.email).toLowerCase()
-  );
-  if (exists) return exists;
-
-  const { data, error } = await supabase
-    .from("mail_accounts")
-    .insert({
-      owner_user_id: user.id,
-      email: user.email,
-      mail_password_encrypted: user.mail_password_encrypted,
-      is_active: true
-    })
-    .select("*")
-    .limit(1);
-
-  if (error) throw httpError(500, error.message);
-  return data?.[0] || null;
 }
 
 export function httpError(status, message) {
@@ -217,7 +138,6 @@ function extractTextFromRaw(raw) {
   body = body.replace(/^Content-[^\n]*$/gim, " ");
   body = body.replace(/^MIME-Version:[^\n]*$/gim, " ");
   body = body.replace(/^charset=[^\n]*$/gim, " ");
-
   body = body.replace(/=\r?\n/g, "");
   body = body.replace(/=([A-F0-9]{2})/gi, (_, hex) =>
     String.fromCharCode(parseInt(hex, 16))
@@ -227,18 +147,13 @@ function extractTextFromRaw(raw) {
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<head[\s\S]*?<\/head>/gi, " ")
-    .replace(/<!--[\s\S]*?-->/g, " ");
-
-  body = body
+    .replace(/<!--[\s\S]*?-->/g, " ")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n")
     .replace(/<\/div>/gi, "\n")
     .replace(/<\/tr>/gi, "\n")
-    .replace(/<\/li>/gi, "\n");
-
-  body = body.replace(/<[^>]+>/g, " ");
-
-  body = body
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
     .replace(/&lt;/gi, "<")
@@ -267,30 +182,37 @@ function extractTextFromRaw(raw) {
   return body.slice(0, 20000);
 }
 
-export async function syncMailForAccount(user, account) {
-  if (!user?.is_active) {
-    throw httpError(403, "Akun web nonaktif.");
-  }
-
-  if (!account) {
-    throw httpError(500, "Account tidak ditemukan.");
-  }
-
-  if (!account?.is_active) {
-    throw httpError(403, "Akun email nonaktif.");
-  }
-
-  if (!account.mail_password_encrypted) {
-    throw httpError(500, `mail_password_encrypted kosong untuk ${account.email}`);
-  }
-
+export async function verifyMailinLogin(email, mailPassword) {
   const client = new ImapFlow({
     host: MAILIN_IMAP_HOST,
     port: MAILIN_IMAP_PORT,
     secure: MAILIN_IMAP_TLS,
     auth: {
-      user: account.email,
-      pass: decryptValue(account.mail_password_encrypted)
+      user: email,
+      pass: mailPassword
+    },
+    logger: false
+  });
+
+  await client.connect();
+  try {
+    await client.mailboxOpen("INBOX");
+    return true;
+  } catch (err) {
+    throw httpError(401, `Login email gagal: ${err.message}`);
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
+export async function syncMailbox(email, encryptedMailPassword) {
+  const client = new ImapFlow({
+    host: MAILIN_IMAP_HOST,
+    port: MAILIN_IMAP_PORT,
+    secure: MAILIN_IMAP_TLS,
+    auth: {
+      user: email,
+      pass: decryptValue(encryptedMailPassword)
     },
     logger: false
   });
@@ -299,7 +221,6 @@ export async function syncMailForAccount(user, account) {
 
   try {
     const mailbox = await client.mailboxOpen("INBOX");
-
     if (!mailbox.exists || mailbox.exists < 1) {
       return { imported: 0, message: "Inbox kosong" };
     }
@@ -318,18 +239,13 @@ export async function syncMailForAccount(user, account) {
       const fromEmail = fromEntry?.address || "";
       const fromName = fromEntry?.name || "";
       const subject = msg.envelope?.subject || "(Tanpa subject)";
-      const receivedAt = msg.internalDate
-        ? new Date(msg.internalDate).toISOString()
-        : null;
+      const receivedAt = msg.internalDate ? new Date(msg.internalDate).toISOString() : null;
       const messageId = msg.envelope?.messageId || null;
-      const bodyText = cleanBodyText(
-        extractTextFromRaw(msg.source?.toString("utf8") || "")
-      );
+      const bodyText = cleanBodyText(extractTextFromRaw(msg.source?.toString("utf8") || ""));
 
       const { error } = await supabase.from("emails").upsert(
         {
-          user_id: user.id,
-          mail_account_id: account.id,
+          mailbox_email: email,
           mail_uid: msg.uid,
           message_id: messageId,
           from_name: fromName,
@@ -338,7 +254,7 @@ export async function syncMailForAccount(user, account) {
           body_text: bodyText.slice(0, 20000),
           received_at: receivedAt
         },
-        { onConflict: "user_id,mail_account_id,mail_uid" }
+        { onConflict: "mailbox_email,mail_uid" }
       );
 
       if (error) {
