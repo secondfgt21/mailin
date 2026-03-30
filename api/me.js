@@ -2,8 +2,6 @@ import {
   allowMethods,
   sendJson,
   getClaimsFromRequest,
-  getUserById,
-  ensurePrimaryAccountForUser,
   httpError
 } from "./_lib.js";
 
@@ -12,16 +10,12 @@ export default async function handler(req, res) {
 
   try {
     const claims = await getClaimsFromRequest(req);
-    const user = await getUserById(Number(claims.sub));
-    if (!user) throw httpError(404, "User tidak ditemukan.");
-
-    const primaryAccount = await ensurePrimaryAccountForUser(user);
+    if (!claims?.email) {
+      throw httpError(401, "Session email tidak ditemukan.");
+    }
 
     return sendJson(res, 200, {
-      id: user.id,
-      email: user.email,
-      is_active: user.is_active,
-      primary_account_id: primaryAccount?.id || null
+      email: claims.email
     });
   } catch (error) {
     return sendJson(res, error.status || 500, {
