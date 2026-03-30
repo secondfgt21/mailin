@@ -1,9 +1,9 @@
 import {
   allowMethods,
   sendJson,
-  getUserByEmail,
-  verifyPassword,
+  encryptValue,
   createToken,
+  verifyMailinLogin,
   httpError
 } from "./_lib.js";
 
@@ -12,22 +12,26 @@ export default async function handler(req, res) {
 
   try {
     const { email, password } = req.body || {};
-    if (!email || !password) throw httpError(400, "Email dan password wajib diisi.");
 
-    const user = await getUserByEmail(email);
-    if (!user) throw httpError(404, "Email tidak ditemukan.");
-    if (!user.is_active) throw httpError(403, "Akun nonaktif.");
+    if (!email || !password) {
+      throw httpError(400, "Email dan password wajib diisi.");
+    }
 
-    const ok = await verifyPassword(password, user.password_hash);
-    if (!ok) throw httpError(401, "Password salah.");
+    await verifyMailinLogin(email, password);
 
-    const token = await createToken(user);
+    const encryptedMailPassword = encryptValue(password);
+    const token = await createToken(email, encryptedMailPassword);
+
     return sendJson(res, 200, {
       ok: true,
       token,
-      user: { id: user.id, email: user.email }
+      user: {
+        email
+      }
     });
   } catch (error) {
-    return sendJson(res, error.status || 500, { detail: error.message || "Server error." });
+    return sendJson(res, error.status || 500, {
+      detail: error.message || "Server error."
+    });
   }
 }
