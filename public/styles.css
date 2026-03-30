@@ -8,14 +8,8 @@
   --shadow: 0 0 28px rgba(255, 46, 67, 0.16), 0 0 60px rgba(98, 0, 15, 0.22);
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  min-height: 100%;
-}
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
 
 body {
   margin: 0;
@@ -87,12 +81,7 @@ body {
   box-shadow: 0 0 20px rgba(255, 51, 71, 0.75);
 }
 
-h1,
-h2,
-h3,
-p {
-  margin: 0;
-}
+h1, h2, h3, p { margin: 0; }
 
 .muted {
   color: var(--muted);
@@ -144,9 +133,7 @@ input:focus {
   box-shadow: 0 10px 26px rgba(255, 34, 60, 0.22);
 }
 
-.btn:hover {
-  filter: brightness(1.05);
-}
+.btn:hover { filter: brightness(1.05); }
 
 .btn-secondary {
   background: linear-gradient(180deg, #381016, #1b0b0d);
@@ -165,17 +152,14 @@ input:focus {
   font-size: 14px;
 }
 
-.hidden {
-  display: none !important;
-}
+.hidden { display: none !important; }
 
 .dashboard {
   display: grid;
   gap: 14px;
 }
 
-.topbar,
-.account-bar {
+.topbar, .account-bar {
   padding: 16px 18px;
   display: flex;
   flex-direction: column;
@@ -200,7 +184,7 @@ input:focus {
   padding: 9px 12px;
   border-radius: 999px;
   color: #ffd1d1;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255,255,255,0.03);
   font-size: 13px;
 }
 
@@ -234,7 +218,7 @@ input:focus {
   padding: 10px 12px;
   border-radius: 16px;
   border: 1px solid rgba(255, 70, 90, 0.12);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255,255,255,0.02);
   cursor: pointer;
 }
 
@@ -289,13 +273,8 @@ input:focus {
   transition: 0.15s ease;
 }
 
-.gmail-row:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.gmail-row.active {
-  background: rgba(255, 42, 72, 0.08);
-}
+.gmail-row:hover { background: rgba(255,255,255,0.03); }
+.gmail-row.active { background: rgba(255, 42, 72, 0.08); }
 
 .sender {
   font-weight: 700;
@@ -334,9 +313,7 @@ input:focus {
   color: #c89b9b;
 }
 
-.detail-page {
-  padding: 14px;
-}
+.detail-page { padding: 14px; }
 
 .detail-topbar {
   display: flex;
@@ -348,7 +325,7 @@ input:focus {
 
 .back-btn {
   border: 1px solid rgba(255, 92, 92, 0.16);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255,255,255,0.03);
   color: #ffe6e6;
   padding: 10px 14px;
   border-radius: 14px;
@@ -374,9 +351,7 @@ input:focus {
   font-size: 14px;
 }
 
-.meta span {
-  color: #bf8b8b;
-}
+.meta span { color: #bf8b8b; }
 
 .body {
   white-space: pre-line;
@@ -384,7 +359,7 @@ input:focus {
   margin: 0;
   padding: 16px 18px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(255,255,255,0.025);
   border: 1px solid rgba(255, 70, 90, 0.12);
   color: #ffe5e5;
   min-height: 300px;
@@ -393,53 +368,11 @@ input:focus {
   font-size: 15px;
 }
 
-.tab-row {
-  display: flex;
-  gap: 10px;
-  margin: 18px 0 6px;
-}
-
-.tab-btn {
-  flex: 1;
-  border: 1px solid rgba(255, 72, 72, 0.16);
-  background: rgba(255, 255, 255, 0.03);
-  color: #ffdede;
-  padding: 11px 14px;
-  border-radius: 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.tab-btn.active {
-  background: linear-gradient(180deg, #ff3751, #86111e);
-  box-shadow: 0 10px 26px rgba(255, 34, 60, 0.22);
-  border-color: transparent;
-}
-
 @media (max-width: 860px) {
-  .topbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .gmail-row {
-    grid-template-columns: 1fr;
-    gap: 4px;
-  }
-
-  .mail-date {
-    margin-top: 2px;
-  }
-
-  .gmail-title {
-    font-size: 24px;
-  }
-
-  .mail-open h3 {
-    font-size: 22px;
-  }
-
-  .body {
-    min-height: 50vh;
-  }
+  .topbar { flex-direction: column; align-items: flex-start; }
+  .gmail-row { grid-template-columns: 1fr; gap: 4px; }
+  .mail-date { margin-top: 2px; }
+  .gmail-title { font-size: 24px; }
+  .mail-open h3 { font-size: 22px; }
+  .body { min-height: 50vh; }
 }
