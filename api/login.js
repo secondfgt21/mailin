@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     if (!result.ok) {
       return sendJson(res, 401, {
         ok: false,
-        detail: "Email atau password Mailin salah."
+        detail: "Email atau password salah."
       });
     }
 
