@@ -335,7 +335,7 @@ loginForm.addEventListener("submit", async (e) => {
     const result = await res.json();
 
     if (!res.ok || !result.ok) {
-      throw new Error(result.detail || "Email atau password Mailin salah.");
+      throw new Error(result.detail || "Email atau password salah.");
     }
 
     accounts = [{ email, password }];
@@ -385,7 +385,7 @@ addAccountForm.addEventListener("submit", async (e) => {
     const result = await res.json();
 
     if (!res.ok || !result.ok) {
-      throw new Error(result.detail || "Email atau password Mailin salah.");
+      throw new Error(result.detail || "Email atau password salah.");
     }
 
     accounts.push({ email, password });
