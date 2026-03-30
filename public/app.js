@@ -2,23 +2,25 @@ const loginView = document.getElementById("loginView");
 const dashboardView = document.getElementById("dashboardView");
 const inboxPage = document.getElementById("inboxPage");
 const detailPage = document.getElementById("detailPage");
+
 const loginForm = document.getElementById("loginForm");
-const createUserForm = document.getElementById("createUserForm");
 const addAccountForm = document.getElementById("addAccountForm");
+
 const loginMsg = document.getElementById("loginMsg");
 const accountMsg = document.getElementById("accountMsg");
+
 const userEmail = document.getElementById("userEmail");
 const emailList = document.getElementById("emailList");
 const accountList = document.getElementById("accountList");
+
 const detailSubject = document.getElementById("detailSubject");
 const detailFrom = document.getElementById("detailFrom");
 const detailDate = document.getElementById("detailDate");
 const detailAccount = document.getElementById("detailAccount");
 const detailBody = document.getElementById("detailBody");
+
 const syncBtn = document.getElementById("syncBtn");
 const logoutBtn = document.getElementById("logoutBtn");
-const showLoginTab = document.getElementById("showLoginTab");
-const showCreateTab = document.getElementById("showCreateTab");
 const backBtn = document.getElementById("backBtn");
 const inboxCount = document.getElementById("inboxCount");
 const syncStatus = document.getElementById("syncStatus");
@@ -29,63 +31,41 @@ let emails = [];
 let accounts = [];
 let syncTimer = null;
 let selectedEmailId = null;
-let selectedAccountId = null;
+let selectedAccountEmail = null;
 
-function setToken(token) {
-  localStorage.setItem("impura_token", token);
+function getAccounts() {
+  try {
+    return JSON.parse(localStorage.getItem("impura_accounts") || "[]");
+  } catch {
+    return [];
+  }
 }
 
-function getToken() {
-  return localStorage.getItem("impura_token");
+function saveAccounts(newAccounts) {
+  localStorage.setItem("impura_accounts", JSON.stringify(newAccounts));
 }
 
-function clearToken() {
-  localStorage.removeItem("impura_token");
-  localStorage.removeItem("impura_user_email");
-  localStorage.removeItem("impura_selected_account_id");
+function clearAccounts() {
+  localStorage.removeItem("impura_accounts");
+  localStorage.removeItem("impura_selected_account_email");
 }
 
-function setUserEmailCache(email) {
-  localStorage.setItem("impura_user_email", email);
-}
-
-function getUserEmailCache() {
-  return localStorage.getItem("impura_user_email");
-}
-
-function setSelectedAccount(id) {
-  selectedAccountId = id ? Number(id) : null;
-  if (selectedAccountId) {
-    localStorage.setItem("impura_selected_account_id", String(selectedAccountId));
+function setSelectedAccountEmail(email) {
+  selectedAccountEmail = email || null;
+  if (selectedAccountEmail) {
+    localStorage.setItem("impura_selected_account_email", selectedAccountEmail);
   } else {
-    localStorage.removeItem("impura_selected_account_id");
+    localStorage.removeItem("impura_selected_account_email");
   }
 }
 
-function getStoredSelectedAccount() {
-  const v = localStorage.getItem("impura_selected_account_id");
-  return v ? Number(v) : null;
+function getStoredSelectedAccountEmail() {
+  return localStorage.getItem("impura_selected_account_email");
 }
 
-async function api(path, options = {}) {
-  const token = getToken();
-  const headers = {
-    "Content-Type": "application/json",
-    ...(options.headers || {})
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  const res = await fetch(path, { ...options, headers });
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new Error(data.detail || "Request gagal");
-  }
-
-  return data;
+function maskAccountPassword(password) {
+  if (!password) return "";
+  return "•".repeat(Math.min(password.length, 10));
 }
 
 function showLogin() {
@@ -97,15 +77,6 @@ function showLogin() {
 function showDashboard() {
   loginView.classList.add("hidden");
   dashboardView.classList.remove("hidden");
-}
-
-function setTab(mode) {
-  const isLogin = mode === "login";
-  loginForm.classList.toggle("hidden", !isLogin);
-  createUserForm.classList.toggle("hidden", isLogin);
-  showLoginTab.classList.toggle("active", isLogin);
-  showCreateTab.classList.toggle("active", !isLogin);
-  loginMsg.textContent = "";
 }
 
 function setSyncText(text) {
@@ -126,11 +97,8 @@ function shortDate(v) {
   if (!v) return "-";
   try {
     const d = new Date(v);
-    return (
-      d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) +
-      " " +
-      d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-    );
+    return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) + " " +
+      d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
   } catch {
     return v;
   }
@@ -162,12 +130,12 @@ function renderAccounts() {
   }
 
   const allChip = document.createElement("div");
-  allChip.className = "account-chip" + (!selectedAccountId ? " active" : "");
+  allChip.className = "account-chip" + (!selectedAccountEmail ? " active" : "");
   allChip.innerHTML = '<div class="email">Semua akun</div>';
   allChip.onclick = async () => {
-    setSelectedAccount(null);
+    setSelectedAccountEmail(null);
     renderAccounts();
-    await fetchEmailsOnly();
+    renderEmailList();
     showInboxPage();
   };
   accountList.appendChild(allChip);
@@ -175,7 +143,7 @@ function renderAccounts() {
   accounts.forEach((acc) => {
     const chip = document.createElement("div");
     chip.className =
-      "account-chip" + (selectedAccountId === acc.id ? " active" : "");
+      "account-chip" + (selectedAccountEmail === acc.email ? " active" : "");
 
     chip.innerHTML = `
       <div class="email">${acc.email}</div>
@@ -184,34 +152,41 @@ function renderAccounts() {
 
     chip.onclick = async (e) => {
       if (e.target.classList.contains("remove")) return;
-      setSelectedAccount(acc.id);
+      setSelectedAccountEmail(acc.email);
       renderAccounts();
-      await fetchEmailsOnly();
+      renderEmailList();
       showInboxPage();
     };
 
     chip.querySelector(".remove").onclick = async (e) => {
       e.stopPropagation();
 
-      if (!confirm("Hapus akun ini dari panel?")) return;
+      const next = accounts.filter((x) => x.email !== acc.email);
+      accounts = next;
+      saveAccounts(next);
 
-      try {
-        await api("/api/accounts?id=" + acc.id, { method: "DELETE" });
-        accountMsg.textContent = "Akun dihapus.";
+      if (selectedAccountEmail === acc.email) {
+        setSelectedAccountEmail(null);
+      }
 
-        if (selectedAccountId === acc.id) {
-          setSelectedAccount(null);
-        }
+      accountMsg.textContent = "Akun dihapus.";
+      renderAccounts();
+      renderEmailList();
 
-        await loadAccounts();
-        await fetchEmailsOnly();
-      } catch (err) {
-        accountMsg.textContent = err.message;
+      if (!accounts.length) {
+        clearAccounts();
+        showLogin();
+        loginMsg.textContent = "";
       }
     };
 
     accountList.appendChild(chip);
   });
+}
+
+function getVisibleEmails() {
+  if (!selectedAccountEmail) return emails;
+  return emails.filter((x) => x.account_email === selectedAccountEmail);
 }
 
 function showDetailPage(item) {
@@ -223,134 +198,95 @@ function showDetailPage(item) {
   detailFrom.textContent = item.from_name
     ? `${item.from_name} <${item.from_email || "-"}>`
     : (item.from_email || "-");
-  detailDate.textContent = formatDate(item.received_at || item.created_at);
-
-  const acc = accounts.find((a) => a.id === item.mail_account_id);
-  detailAccount.textContent = acc?.email || "-";
-
+  detailDate.textContent = formatDate(item.received_at);
+  detailAccount.textContent = item.account_email || "-";
   detailBody.textContent = cleanBody(item.body_text);
 }
 
 function renderEmailList() {
   emailList.innerHTML = "";
-  inboxCount.textContent = `${emails.length} email`;
 
-  if (!emails.length) {
-    emailList.innerHTML =
-      '<div class="empty-list">Belum ada email di server kamu.</div>';
+  const visibleEmails = getVisibleEmails();
+  inboxCount.textContent = `${visibleEmails.length} email`;
+
+  if (!visibleEmails.length) {
+    emailList.innerHTML = '<div class="empty-list">Belum ada email di server kamu.</div>';
     showInboxPage();
     return;
   }
 
-  emails.forEach((item) => {
+  visibleEmails.forEach((item) => {
     const row = document.createElement("div");
-    row.className =
-      "gmail-row" + (item.id === selectedEmailId ? " active" : "");
-
-    const acc = accounts.find((a) => a.id === item.mail_account_id);
+    row.className = "gmail-row" + (item.id === selectedEmailId ? " active" : "");
 
     row.innerHTML = `
       <div class="sender">${item.from_name || item.from_email || "(Unknown sender)"}</div>
       <div class="subject-line">
         <span class="subject">${item.subject || "(Tanpa subject)"}</span>
-        <span class="snippet">${buildSnippet(item.body_text)}${acc ? " • " + acc.email : ""}</span>
+        <span class="snippet">${buildSnippet(item.body_text)} • ${item.account_email}</span>
       </div>
-      <div class="mail-date">${shortDate(item.received_at || item.created_at)}</div>
+      <div class="mail-date">${shortDate(item.received_at)}</div>
     `;
 
     row.onclick = () => {
-      document
-        .querySelectorAll(".gmail-row")
-        .forEach((x) => x.classList.remove("active"));
+      document.querySelectorAll(".gmail-row").forEach((x) => x.classList.remove("active"));
       row.classList.add("active");
       showDetailPage(item);
-      history.replaceState({}, "", "#mail-" + item.id);
+      history.replaceState({}, "", "#mail-" + encodeURIComponent(item.id));
     };
 
     emailList.appendChild(row);
   });
 
-  if (!selectedEmailId && emails[0]) {
-    selectedEmailId = emails[0].id;
+  if (!selectedEmailId && visibleEmails[0]) {
+    selectedEmailId = visibleEmails[0].id;
   }
 }
 
-async function loadMe() {
-  const me = await api("/api/me");
-  userEmail.textContent = me.email;
-  setUserEmailCache(me.email);
-
-  if (!selectedAccountId && me.primary_account_id) {
-    const stored = getStoredSelectedAccount();
-    if (stored) {
-      selectedAccountId = stored;
-    }
-  }
-}
-
-async function loadAccounts() {
-  const data = await api("/api/accounts");
-  accounts = data.accounts || [];
-
-  if (
-    selectedAccountId &&
-    !accounts.find((a) => a.id === selectedAccountId)
-  ) {
-    setSelectedAccount(null);
+async function syncAll(showLoading = true) {
+  if (!accounts.length) {
+    setSyncText("Belum ada akun");
+    return;
   }
 
-  renderAccounts();
-}
-
-async function fetchEmailsOnly() {
-  const url = selectedAccountId
-    ? `/api/emails?account_id=${selectedAccountId}`
-    : "/api/emails";
-
-  const data = await api(url);
-  emails = data.emails || [];
-  renderEmailList();
-
-  if (window.location.hash.startsWith("#mail-")) {
-    const id = Number(window.location.hash.replace("#mail-", ""));
-    const selected = emails.find((x) => x.id === id);
-    if (selected) {
-      showDetailPage(selected);
-      return;
-    }
-  }
-
-  showInboxPage();
-}
-
-async function syncAndLoadEmails(showLoading = true) {
   if (showLoading) setSyncText("Sedang sync...");
   syncBtn.disabled = true;
   syncBtn.textContent = "Sync...";
 
   try {
-    const url = selectedAccountId
-      ? `/api/sync?account_id=${selectedAccountId}`
-      : "/api/sync";
+    const res = await fetch("/api/sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        accounts: accounts.map((x) => ({
+          email: x.email,
+          password: x.password
+        }))
+      })
+    });
 
-    const result = await api(url, { method: "POST" });
+    const result = await res.json();
 
-    await loadAccounts();
-    await fetchEmailsOnly();
+    if (!res.ok) {
+      throw new Error(result.detail || "Request gagal");
+    }
 
-    if (result?.mode === "all" && Array.isArray(result.results)) {
-      const failed = result.results.filter((x) => x.ok === false);
+    emails = Array.isArray(result.emails) ? result.emails : [];
+    renderAccounts();
+    renderEmailList();
 
-      if (failed.length) {
-        const names = failed.map((x) => x.email).join(", ");
-        setSyncText(`Sebagian gagal (${failed.length})`);
-        alert(`Akun yang gagal sync: ${names}`);
-      } else {
-        setSyncText("Auto sync aktif");
-      }
-    } else if (result?.mode === "single" && result.ok === false) {
-      setSyncText("Akun ini gagal sync");
-      alert(result.result?.error || "Sync akun gagal");
+    const failed = Array.isArray(result.results)
+      ? result.results.filter((x) => !x.ok)
+      : [];
+
+    if (failed.length) {
+      setSyncText(`Sebagian gagal (${failed.length})`);
+      alert(
+        "Akun yang gagal sync: " +
+          failed.map((x) => `${x.email}${x.error ? " - " + x.error : ""}`).join(", ")
+      );
     } else {
       setSyncText("Auto sync aktif");
     }
@@ -364,9 +300,7 @@ async function syncAndLoadEmails(showLoading = true) {
 }
 
 function stopAutoSync() {
-  if (syncTimer) {
-    clearInterval(syncTimer);
-  }
+  if (syncTimer) clearInterval(syncTimer);
   syncTimer = null;
 }
 
@@ -375,7 +309,7 @@ function startAutoSync() {
 
   syncTimer = setInterval(async () => {
     try {
-      await syncAndLoadEmails(false);
+      await syncAll(false);
     } catch {
       setSyncText("Sync gagal");
     }
@@ -384,91 +318,60 @@ function startAutoSync() {
 
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  loginMsg.textContent = "Sedang login...";
+  loginMsg.textContent = "";
 
-  try {
-    const payload = {
-      email: document.getElementById("email").value.trim(),
-      password: document.getElementById("password").value
-    };
+  const email = String(document.getElementById("email").value || "").trim().toLowerCase();
+  const password = String(document.getElementById("password").value || "");
 
-    const data = await api("/api/login", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
-
-    setToken(data.token);
-    setUserEmailCache(data.user?.email || payload.email);
-    userEmail.textContent = data.user?.email || payload.email;
-
-    showDashboard();
-    loginMsg.textContent = "";
-    showInboxPage();
-
-    await loadMe();
-    await loadAccounts();
-    await syncAndLoadEmails(true);
-    startAutoSync();
-  } catch (err) {
-    loginMsg.textContent = err.message;
+  if (!email || !password) {
+    loginMsg.textContent = "Email dan password wajib diisi.";
+    return;
   }
-});
 
-createUserForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  loginMsg.textContent = "Sedang membuat user...";
+  accounts = [{ email, password }];
+  saveAccounts(accounts);
+  setSelectedAccountEmail(null);
 
-  try {
-    const payload = {
-      admin_key: document.getElementById("adminKey").value.trim(),
-      email: document.getElementById("createEmail").value.trim(),
-      web_password: document.getElementById("createWebPassword").value,
-      mail_password: document.getElementById("createMailPassword").value
-    };
+  userEmail.textContent = email;
+  showDashboard();
+  renderAccounts();
 
-    const data = await api("/api/admin/create-user", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
-
-    loginMsg.textContent = `User berhasil dibuat: ${data.user?.email || payload.email}`;
-    createUserForm.reset();
-    setTab("login");
-  } catch (err) {
-    loginMsg.textContent = err.message;
-  }
+  loginForm.reset();
+  await syncAll(true);
+  startAutoSync();
 });
 
 addAccountForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  accountMsg.textContent = "Sedang menambah akun...";
+  accountMsg.textContent = "";
 
-  try {
-    const payload = {
-      email: document.getElementById("addAccountEmail").value.trim(),
-      mail_password: document.getElementById("addAccountPassword").value
-    };
+  const email = String(document.getElementById("addAccountEmail").value || "").trim().toLowerCase();
+  const password = String(document.getElementById("addAccountPassword").value || "");
 
-    await api("/api/accounts", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
-
-    accountMsg.textContent = "Akun berhasil ditambahkan.";
-    addAccountForm.reset();
-    addAccountForm.classList.add("hidden");
-    await loadAccounts();
-  } catch (err) {
-    accountMsg.textContent = err.message;
+  if (!email || !password) {
+    accountMsg.textContent = "Email dan password wajib diisi.";
+    return;
   }
+
+  if (accounts.find((x) => x.email === email)) {
+    accountMsg.textContent = "Akun sudah ditambahkan.";
+    return;
+  }
+
+  accounts.push({ email, password });
+  saveAccounts(accounts);
+
+  accountMsg.textContent = "Akun berhasil ditambahkan.";
+  addAccountForm.reset();
+  addAccountForm.classList.add("hidden");
+
+  renderAccounts();
+  await syncAll(true);
 });
 
 toggleAddAccountBtn.addEventListener("click", () => {
   addAccountForm.classList.toggle("hidden");
 });
-
-showLoginTab.addEventListener("click", () => setTab("login"));
-showCreateTab.addEventListener("click", () => setTab("create"));
 
 backBtn.addEventListener("click", () => {
   showInboxPage();
@@ -476,52 +379,32 @@ backBtn.addEventListener("click", () => {
 });
 
 syncBtn.addEventListener("click", async () => {
-  try {
-    await syncAndLoadEmails(true);
-  } catch (err) {
-    alert(err.message);
-    setSyncText("Sync gagal");
-  }
+  await syncAll(true);
 });
 
 logoutBtn.addEventListener("click", () => {
-  clearToken();
-  emails = [];
+  clearAccounts();
   accounts = [];
+  emails = [];
   selectedEmailId = null;
-  selectedAccountId = null;
+  selectedAccountEmail = null;
   showLogin();
-  setTab("login");
 });
 
-(async function init() {
-  setTab("login");
-  selectedAccountId = getStoredSelectedAccount();
+(function init() {
+  accounts = getAccounts();
+  selectedAccountEmail = getStoredSelectedAccountEmail();
 
-  const token = getToken();
-  const cachedEmail = getUserEmailCache();
-
-  if (!token) {
+  if (!accounts.length) {
     showLogin();
     return;
   }
 
-  userEmail.textContent = cachedEmail || "Sedang memuat...";
+  userEmail.textContent = accounts[0]?.email || "-";
   showDashboard();
-  showInboxPage();
-  setSyncText("Mengecek sesi...");
-
-  try {
-    await loadMe();
-    await loadAccounts();
-    await fetchEmailsOnly();
-    await syncAndLoadEmails(false);
-    startAutoSync();
-  } catch (err) {
-    setSyncText("Sesi gagal dimuat");
-    if (!cachedEmail) {
-      clearToken();
-      showLogin();
-    }
-  }
+  renderAccounts();
+  renderEmailList();
+  setSyncText("Siap");
+  syncAll(false);
+  startAutoSync();
 })();
