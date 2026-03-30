@@ -63,11 +63,6 @@ function getStoredSelectedAccountEmail() {
   return localStorage.getItem("impura_selected_account_email");
 }
 
-function maskAccountPassword(password) {
-  if (!password) return "";
-  return "•".repeat(Math.min(password.length, 10));
-}
-
 function showLogin() {
   stopAutoSync();
   loginView.classList.remove("hidden");
@@ -318,7 +313,7 @@ function startAutoSync() {
 
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  loginMsg.textContent = "";
+  loginMsg.textContent = "Mengecek login...";
 
   const email = String(document.getElementById("email").value || "").trim().toLowerCase();
   const password = String(document.getElementById("password").value || "");
@@ -328,22 +323,42 @@ loginForm.addEventListener("submit", async (e) => {
     return;
   }
 
-  accounts = [{ email, password }];
-  saveAccounts(accounts);
-  setSelectedAccountEmail(null);
+  try {
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email, password })
+    });
 
-  userEmail.textContent = email;
-  showDashboard();
-  renderAccounts();
+    const result = await res.json();
 
-  loginForm.reset();
-  await syncAll(true);
-  startAutoSync();
+    if (!res.ok || !result.ok) {
+      throw new Error(result.detail || "Email atau password Mailin salah.");
+    }
+
+    accounts = [{ email, password }];
+    saveAccounts(accounts);
+    setSelectedAccountEmail(null);
+
+    userEmail.textContent = email;
+    showDashboard();
+    renderAccounts();
+
+    loginForm.reset();
+    loginMsg.textContent = "";
+
+    await syncAll(true);
+    startAutoSync();
+  } catch (err) {
+    loginMsg.textContent = err.message || "Login gagal.";
+  }
 });
 
 addAccountForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  accountMsg.textContent = "";
+  accountMsg.textContent = "Mengecek akun...";
 
   const email = String(document.getElementById("addAccountEmail").value || "").trim().toLowerCase();
   const password = String(document.getElementById("addAccountPassword").value || "");
@@ -358,15 +373,33 @@ addAccountForm.addEventListener("submit", async (e) => {
     return;
   }
 
-  accounts.push({ email, password });
-  saveAccounts(accounts);
+  try {
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email, password })
+    });
 
-  accountMsg.textContent = "Akun berhasil ditambahkan.";
-  addAccountForm.reset();
-  addAccountForm.classList.add("hidden");
+    const result = await res.json();
 
-  renderAccounts();
-  await syncAll(true);
+    if (!res.ok || !result.ok) {
+      throw new Error(result.detail || "Email atau password Mailin salah.");
+    }
+
+    accounts.push({ email, password });
+    saveAccounts(accounts);
+
+    accountMsg.textContent = "Akun berhasil ditambahkan.";
+    addAccountForm.reset();
+    addAccountForm.classList.add("hidden");
+
+    renderAccounts();
+    await syncAll(true);
+  } catch (err) {
+    accountMsg.textContent = err.message || "Tambah akun gagal.";
+  }
 });
 
 toggleAddAccountBtn.addEventListener("click", () => {
